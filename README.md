@@ -21,16 +21,52 @@ An AI-powered assistant for Excel that provides real-time suggestions, formula o
 
 ## Getting Started
 
+### **Option 1: Quick Start (Recommended)**
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Start both backend and frontend servers
+python3 serve_frontend.py  # In one terminal
+cd backend && python3 main.py  # In another terminal
+```
+
+### **Option 2: Using npm scripts**
 ```bash
 # Install dependencies
 pip install -r requirements.txt
 npm install
 
-# Start the backend
-python backend/main.py
-
-# Start the frontend
+# Start both servers
 npm run dev
+```
+
+### **Option 3: Manual Start**
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Start backend server
+cd backend && python3 main.py
+
+# Start frontend server (in new terminal)
+python3 serve_frontend.py
+```
+
+## Development
+
+```bash
+# Run tests
+npm run test
+
+# Create test data
+npm run create-test-data
+
+# Start only backend
+npm run start
+
+# Start only frontend
+npm run frontend
 ```
 
 ## Project Structure
