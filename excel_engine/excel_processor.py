@@ -1,4 +1,5 @@
 import openpyxl
+import openpyxl.utils
 import pandas as pd
 import numpy as np
 from typing import Dict, Any, List, Optional
@@ -42,7 +43,7 @@ class ExcelProcessor:
         data = {
             "title": sheet.title,
             "dimensions": f"{sheet.max_row}x{sheet.max_column}",
-            "used_range": f"A1:{sheet.max_column_letter}{sheet.max_row}",
+            "used_range": f"A1:{openpyxl.utils.get_column_letter(sheet.max_column)}{sheet.max_row}",
             "data_types": {},
             "formulas": [],
             "headers": [],
@@ -73,7 +74,7 @@ class ExcelProcessor:
         if sheet.max_row > 1:
             data_types = {}
             for col in range(1, min(sheet.max_column + 1, 6)):  # First 5 columns
-                col_letter = sheet.cell(row=1, column=col).column_letter
+                col_letter = openpyxl.utils.get_column_letter(col)
                 sample_values = []
                 for row in range(2, min(sheet.max_row + 1, 7)):  # First 5 data rows
                     cell_value = sheet.cell(row=row, column=col).value

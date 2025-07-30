@@ -52,7 +52,7 @@ async def upload_excel(file: UploadFile = File(...)):
             content = await file.read()
             await f.write(content)
         
-        # Process the Excel file
+        # Process the Excel file using the saved path
         result = excel_processor.process_file(str(file_path))
         
         return {
@@ -107,6 +107,22 @@ async def validate_formula(data: Dict[str, Any]):
         return validation
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/debug-excel")
+async def debug_excel():
+    """Debug endpoint to test Excel processor"""
+    try:
+        # Use the correct path from backend directory
+        result = excel_processor.process_file("../test_data.xlsx")
+        return {
+            "debug_result": result,
+            "processor_type": str(type(excel_processor))
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "error_type": str(type(e))
+        }
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True) 
