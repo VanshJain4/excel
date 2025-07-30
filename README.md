@@ -21,17 +21,30 @@ An AI-powered assistant for Excel that provides real-time suggestions, formula o
 
 ## Getting Started
 
-### **Option 1: Quick Start (Recommended)**
+### **Option 1: One-Click Start (Recommended)**
 ```bash
 # Install Python dependencies
 pip install -r requirements.txt
 
-# Start both backend and frontend servers
-python3 serve_frontend.py  # In one terminal
-cd backend && python3 main.py  # In another terminal
+# Start both servers with one command
+python3 start_excel_cursor.py
 ```
+**Then open your browser to: http://localhost:3000**
 
-### **Option 2: Using npm scripts**
+### **Option 2: Manual Start**
+```bash
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Terminal 1: Start backend server
+cd backend && python3 main.py
+
+# Terminal 2: Start frontend server
+python3 serve_frontend.py
+```
+**Then open your browser to: http://localhost:3000**
+
+### **Option 3: Using npm scripts**
 ```bash
 # Install dependencies
 pip install -r requirements.txt
@@ -40,18 +53,15 @@ npm install
 # Start both servers
 npm run dev
 ```
+**Then open your browser to: http://localhost:3000**
 
-### **Option 3: Manual Start**
-```bash
-# Install dependencies
-pip install -r requirements.txt
+## 🌐 Access Your Application
 
-# Start backend server
-cd backend && python3 main.py
+- **Frontend UI**: http://localhost:3000
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/docs
 
-# Start frontend server (in new terminal)
-python3 serve_frontend.py
-```
+**⚠️ Important**: Always access the application through `http://localhost:3000`, not by opening the HTML file directly!
 
 ## Development
 
