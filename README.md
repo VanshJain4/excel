@@ -1,95 +1,212 @@
-# Excel Cursor
+# LibreOffice Calc Web App
 
-An AI-powered assistant for Excel that provides real-time suggestions, formula optimization, and intelligent data analysis - like Cursor but for spreadsheets.
+A complete web-based LibreOffice Calc solution using Collabora Online and Nextcloud. This setup provides a fully-featured spreadsheet application accessible through your browser with real-time collaboration capabilities.
 
-## Features (Planned)
+## 🚀 Features
 
-- 🤖 **Real-time AI assistance** - Get suggestions as you work
-- 📊 **Smart formula suggestions** - AI-powered formula recommendations
-- 🔍 **Data analysis insights** - Automatic pattern recognition
-- 🛡️ **Error prevention** - Catch mistakes before they happen
-- 💬 **Natural language interface** - "Sum all sales in Q1"
-- ⚡ **Performance optimization** - Smart caching and processing
+- **Full LibreOffice Calc functionality** in your browser
+- **Real-time collaboration** - multiple users can edit simultaneously
+- **File management** through Nextcloud
+- **Support for multiple formats**: .ods, .xlsx, .csv, .xls
+- **Secure HTTPS access** with SSL/TLS encryption
+- **Docker-based deployment** for easy setup and management
 
-## Tech Stack
+## 📋 Prerequisites
 
-- **Backend**: Python with FastAPI
-- **Excel Integration**: openpyxl, xlwings
-- **AI**: OpenAI API / Local LLM
-- **Frontend**: React with TypeScript
-- **UI**: Tailwind CSS + Shadcn/ui
+- Docker
+- Docker Compose
+- At least 4GB RAM available
+- 10GB free disk space
 
-## Getting Started
+## 🛠️ Quick Setup
 
-### **Option 1: One-Click Start (Recommended)**
+1. **Clone or download this repository**
+   ```bash
+   git clone <your-repo-url>
+   cd excel_cursor
+   ```
+
+2. **Run the setup script**
+   ```bash
+   ./setup.sh
+   ```
+
+3. **Access your LibreOffice Calc web app**
+   - Open https://localhost in your browser
+   - Accept the self-signed certificate warning
+   - Log in with: `admin` / `admin_password`
+
+## 📁 Project Structure
+
+```
+excel_cursor/
+├── docker-compose.yml      # Main Docker configuration
+├── setup.sh               # Automated setup script
+├── nginx/
+│   ├── nginx.conf         # NGINX reverse proxy configuration
+│   └── ssl/               # SSL certificates (auto-generated)
+└── README.md              # This file
+```
+
+## 🔧 Manual Setup (Alternative)
+
+If you prefer to set up manually:
+
+1. **Generate SSL certificates**
+   ```bash
+   mkdir -p nginx/ssl
+   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+       -keyout nginx/ssl/nginx.key \
+       -out nginx/ssl/nginx.crt \
+       -subj "/C=US/ST=State/L=City/O=Organization/CN=localhost"
+   ```
+
+2. **Start services**
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Wait for services to initialize** (about 30 seconds)
+
+## 🌐 Access URLs
+
+- **Nextcloud (main interface)**: https://localhost
+- **Direct Nextcloud**: http://localhost:8080
+- **Collabora Online**: https://localhost:9980
+
+## 📖 Usage Guide
+
+### First Time Setup
+
+1. **Access Nextcloud**
+   - Go to https://localhost
+   - Login: `admin` / `admin_password`
+
+2. **Install Collabora Online app**
+   - Go to Settings → Apps
+   - Search for "Collabora Online"
+   - Install the app
+
+3. **Configure Collabora Online**
+   - Go to Settings → Collabora Online
+   - Enter Collabora Online server URL: `https://localhost:9980`
+   - Save settings
+
+### Using LibreOffice Calc
+
+1. **Upload a spreadsheet**
+   - Drag and drop a .ods, .xlsx, or .csv file into Nextcloud
+   - Or use the "+" button to upload
+
+2. **Open in Calc**
+   - Click on the spreadsheet file
+   - It will open in LibreOffice Calc in your browser
+
+3. **Collaborate**
+   - Share the file with others using Nextcloud sharing
+   - Multiple users can edit simultaneously
+   - Changes are saved automatically
+
+## 🔧 Configuration
+
+### Environment Variables
+
+Edit `docker-compose.yml` to customize:
+
+- **Database password**: Change `nextcloud_password`
+- **Admin password**: Change `admin_password`
+- **Collabora password**: Change `collabora_password`
+- **Domain**: Update `domain` in Collabora service
+
+### Production Deployment
+
+For production use:
+
+1. **Replace SSL certificates**
+   - Replace `nginx/ssl/nginx.crt` and `nginx/ssl/nginx.key` with proper certificates
+   - Update domain names in configurations
+
+2. **Set strong passwords**
+   - Update all passwords in `docker-compose.yml`
+   - Use environment files for sensitive data
+
+3. **Configure backup**
+   - Set up regular backups of the `nextcloud_data` volume
+   - Backup the PostgreSQL database
+
+## 🐳 Docker Commands
+
 ```bash
-# Install Python dependencies
-pip install -r requirements.txt
+# Start services
+docker-compose up -d
 
-# Start both servers with one command
-python3 start_excel_cursor.py
+# Stop services
+docker-compose down
+
+# View logs
+docker-compose logs -f
+
+# Restart specific service
+docker-compose restart nextcloud
+
+# Update images
+docker-compose pull
+docker-compose up -d
 ```
-**Then open your browser to: http://localhost:3000**
 
-### **Option 2: Manual Start**
-```bash
-# Install Python dependencies
-pip install -r requirements.txt
+## 🔍 Troubleshooting
 
-# Terminal 1: Start backend server
-cd backend && python3 main.py
+### Common Issues
 
-# Terminal 2: Start frontend server
-python3 serve_frontend.py
-```
-**Then open your browser to: http://localhost:3000**
+1. **Services not starting**
+   ```bash
+   docker-compose logs
+   ```
 
-### **Option 3: Using npm scripts**
-```bash
-# Install dependencies
-pip install -r requirements.txt
-npm install
+2. **SSL certificate errors**
+   - Accept the self-signed certificate in your browser
+   - For production, use proper SSL certificates
 
-# Start both servers
-npm run dev
-```
-**Then open your browser to: http://localhost:3000**
+3. **Collabora not connecting**
+   - Check if Collabora Online app is installed in Nextcloud
+   - Verify the server URL in Nextcloud settings
 
-## 🌐 Access Your Application
+4. **Performance issues**
+   - Increase Docker memory allocation
+   - Consider using SSD storage for volumes
 
-- **Frontend UI**: http://localhost:3000
-- **Backend API**: http://localhost:8000
-- **API Documentation**: http://localhost:8000/docs
-
-**⚠️ Important**: Always access the application through `http://localhost:3000`, not by opening the HTML file directly!
-
-## Development
+### Logs and Debugging
 
 ```bash
-# Run tests
-npm run test
+# View all logs
+docker-compose logs
 
-# Create test data
-npm run create-test-data
+# View specific service logs
+docker-compose logs nextcloud
+docker-compose logs collabora
 
-# Start only backend
-npm run start
-
-# Start only frontend
-npm run frontend
+# Follow logs in real-time
+docker-compose logs -f
 ```
 
-## Project Structure
+## 🔒 Security Considerations
 
-```
-Excel_cursor/
-├── backend/          # Python FastAPI server
-├── frontend/         # React TypeScript app
-├── excel_engine/     # Excel manipulation logic
-├── ai_engine/        # AI integration
-└── docs/            # Documentation
-```
+- Change default passwords immediately
+- Use proper SSL certificates for production
+- Regularly update Docker images
+- Configure firewall rules appropriately
+- Set up regular backups
 
-## Development Status
+## 📚 Additional Resources
 
-🚧 **In Development** - Core architecture and basic functionality being built. 
+- [Nextcloud Documentation](https://docs.nextcloud.com/)
+- [Collabora Online Documentation](https://www.collaboraoffice.com/code/)
+- [LibreOffice Documentation](https://www.libreoffice.org/get-help/documentation/)
+
+## 🤝 Contributing
+
+Feel free to submit issues and enhancement requests!
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE). 

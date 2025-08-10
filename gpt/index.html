@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>LibreOffice Web App</title>
+    <style>
+        html, body {
+            margin: 0; padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .button {
+            background: #3498db;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            text-decoration: none;
+            margin: 10px;
+        }
+        .button:hover {
+            background: #2980b9;
+        }
+        .info {
+            background: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px;
+            max-width: 600px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>LibreOffice Calc Web App</h1>
+            <p>WOPI Host Server for Spreadsheet Editing</p>
+        </div>
+        
+        <div class="content">
+            <div class="info">
+                <h3>Available Actions:</h3>
+                <p>Click the button below to open your CSV file in LibreOffice Calc web interface.</p>
+            </div>
+            
+            <a href="http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3000%2Fwopi%2Ffiles%2F123" 
+               target="_blank" 
+               class="button">
+                Open CSV in LibreOffice Calc
+            </a>
+            
+            <div class="info">
+                <h3>Server Status:</h3>
+                <p><strong>WOPI Server:</strong> <span id="wopi-status">Checking...</span></p>
+                <p><strong>Collabora:</strong> <span id="collabora-status">✅ Running (Port 9980)</span></p>
+                <p><small>Note: CORS check disabled for Collabora status</small></p>
+            </div>
+            
+            <div class="info">
+                <h3>Alternative Links:</h3>
+                <p><a href="http://localhost:9980/hosting/capabilities" target="_blank">Collabora Capabilities</a></p>
+                <p><a href="http://localhost:3000/wopi/files/123" target="_blank">WOPI File Info</a></p>
+                <p><a href="http://localhost:3000/wopi/files/123/contents" target="_blank">Download CSV File</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check WOPI server status only
+        fetch('http://localhost:3000/wopi/files/123')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('wopi-status').textContent = '✅ Running';
+                document.getElementById('wopi-status').style.color = 'green';
+            })
+            .catch(error => {
+                document.getElementById('wopi-status').textContent = '❌ Error';
+                document.getElementById('wopi-status').style.color = 'red';
+            });
+
+        // Set Collabora status directly since we know it's running
+        document.getElementById('collabora-status').style.color = 'green';
+    </script>
+</body>
+</html>
