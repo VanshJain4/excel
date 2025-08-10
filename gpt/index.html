@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>LibreOffice Web App</title>
+    <title>LibreOffice Calc Web App</title>
     <style>
         html, body {
             margin: 0; padding: 0;
@@ -49,26 +49,50 @@
             margin: 20px;
             max-width: 600px;
         }
+        .feature-list {
+            text-align: left;
+            margin: 10px 0;
+        }
+        .feature-list li {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>LibreOffice Calc Web App</h1>
-            <p>WOPI Host Server for Spreadsheet Editing</p>
+            <p>Full Excel-compatible spreadsheet editing with multiple sheets</p>
         </div>
         
         <div class="content">
             <div class="info">
-                <h3>Available Actions:</h3>
-                <p>Click the button below to open your CSV file in LibreOffice Calc web interface.</p>
+                <h3>🚀 Available Features:</h3>
+                <ul class="feature-list">
+                    <li>✅ <strong>Multiple Sheets</strong> - Add, rename, and manage multiple worksheets</li>
+                    <li>✅ <strong>Excel Formulas</strong> - Use SUM, AVERAGE, VLOOKUP, and more</li>
+                    <li>✅ <strong>Formatting</strong> - Colors, fonts, borders, cell styles</li>
+                    <li>✅ <strong>Charts & Graphs</strong> - Create visual data representations</li>
+                    <li>✅ <strong>Real-time Saving</strong> - Changes saved automatically</li>
+                    <li>✅ <strong>Full Excel Compatibility</strong> - Open and edit .xlsx files</li>
+                    <li>✅ <strong>AI Assistant</strong> - Chat with AI about your spreadsheet</li>
+                </ul>
             </div>
             
-            <a href="http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3000%2Fwopi%2Ffiles%2F123" 
+            <a href="http://localhost:3000/collabora-with-chat.html" 
                target="_blank" 
                class="button">
-                Open CSV in LibreOffice Calc
+                Open Excel File with AI Assistant
             </a>
+            
+            <div class="info">
+                <h3>📊 Sample Data Included:</h3>
+                <ul class="feature-list">
+                    <li><strong>Employees Sheet:</strong> Staff information with names, ages, salaries</li>
+                    <li><strong>Products Sheet:</strong> Inventory data with prices and stock levels</li>
+                    <li><strong>Financials Sheet:</strong> Monthly revenue and expense tracking</li>
+                </ul>
+            </div>
             
             <div class="info">
                 <h3>Server Status:</h3>
@@ -81,7 +105,7 @@
                 <h3>Alternative Links:</h3>
                 <p><a href="http://localhost:9980/hosting/capabilities" target="_blank">Collabora Capabilities</a></p>
                 <p><a href="http://localhost:3000/wopi/files/123" target="_blank">WOPI File Info</a></p>
-                <p><a href="http://localhost:3000/wopi/files/123/contents" target="_blank">Download CSV File</a></p>
+                <p><a href="http://localhost:3000/wopi/files/123/contents" target="_blank">Download Excel File</a></p>
             </div>
         </div>
     </div>

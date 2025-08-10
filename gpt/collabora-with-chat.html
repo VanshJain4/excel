@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>LibreOffice Calc with AI Assistant</title>
+    <style>
+        html, body {
+            margin: 0; padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .collabora-container {
+            flex: 1;
+            position: relative;
+            transition: margin-right 0.3s ease;
+        }
+        .collabora-container.chat-hidden {
+            margin-right: 0;
+        }
+        .collabora-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        .chat-sidebar {
+            width: 350px;
+            min-width: 250px;
+            max-width: 800px;
+            background: #f8f9fa;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #0f6803;
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        .chat-sidebar.hidden {
+            width: 0;
+            overflow: hidden;
+        }
+        .chat-sidebar.closed {
+            display: none;
+        }
+        .chat-header {
+            background: #0f6803;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #0a4d02;
+            position: relative;
+        }
+        .chat-toggle {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #0f6803;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 5px 8px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s ease;
+        }
+        .chat-toggle:hover {
+            background: #0a4d02;
+        }
+        .chat-toggle.hidden {
+            background: #27ae60;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .message.user {
+            background: #0f6803;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        .message.ai {
+            background: #e8f0e3;
+            color: #333;
+            border: 1px solid #0f6803;
+            margin-right: auto;
+        }
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        .chat-input-container {
+            padding: 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #0f6803;
+        }
+        .chat-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #0f6803;
+            border-radius: 5px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .chat-input:focus {
+            outline: none;
+            box-shadow: 0 0 5px #0f6803;
+            border-color: #0a4d02;
+        }
+        .send-button {
+            background: #0f6803;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+            font-size: 14px;
+            transition: background 0.2s ease;
+        }
+        .send-button:hover {
+            background: #0a4d02;
+        }
+        .send-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .resize-handle {
+            position: absolute;
+            left: -3px;
+            top: 0;
+            width: 6px;
+            height: 100%;
+            background: #0f6803;
+            cursor: col-resize;
+            transition: background 0.2s ease;
+        }
+        .resize-handle:hover {
+            background: #0a4d02;
+        }
+        .resize-handle.hidden {
+            display: none;
+        }
+        .chat-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+        }
+        .control-button {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #0f6803;
+            border-radius: 3px;
+            padding: 3px 6px;
+            cursor: pointer;
+            font-size: 10px;
+            transition: background 0.2s ease;
+        }
+        .control-button:hover {
+            background: #0f6803;
+            color: white;
+        }
+        .size-controls {
+            position: absolute;
+            top: 35px;
+            right: 10px;
+            display: flex;
+            gap: 3px;
+        }
+        .size-button {
+            background: #f8f9fa;
+            color: #333;
+            border: 1px solid #0f6803;
+            border-radius: 2px;
+            padding: 2px 4px;
+            cursor: pointer;
+            font-size: 8px;
+            transition: background 0.2s ease;
+        }
+        .size-button:hover {
+            background: #0f6803;
+            color: white;
+        }
+        .chat-reopen {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #0f6803;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 15px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+            transition: background 0.2s ease;
+        }
+        .chat-reopen:hover {
+            background: #0a4d02;
+        }
+        .chat-reopen.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="collabora-container" id="collabora-container">
+            <div class="loading" id="loading">Loading LibreOffice Calc...</div>
+            <iframe 
+                class="collabora-iframe" 
+                id="collabora-iframe"
+                src="http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3000%2Fwopi%2Ffiles%2F123"
+                onload="hideLoading()">
+            </iframe>
+        </div>
+        
+        <!-- Chat Sidebar -->
+        <div class="chat-sidebar" id="chat-sidebar">
+            <div class="resize-handle" id="resize-handle"></div>
+            <div class="chat-header">
+                <h3>🤖 AI Assistant</h3>
+                <p style="margin: 5px 0; font-size: 12px; opacity: 0.8;">Chat with AI about your spreadsheet</p>
+                <div class="chat-controls">
+                    <button class="control-button" onclick="closeChat()" id="close-button">Close</button>
+                    <button class="control-button" onclick="resetChatSize()">Reset</button>
+                </div>
+                <div class="size-controls">
+                    <button class="size-button" onclick="increaseChatSize(50)">+50</button>
+                    <button class="size-button" onclick="increaseChatSize(100)">+100</button>
+                    <button class="size-button" onclick="increaseChatSize(200)">+200</button>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages">
+                <div class="message ai">
+                    <div>Hello! I'm your AI assistant. I can help you with your LibreOffice Calc spreadsheet. Try typing a message below!</div>
+                    <div class="message-time">Just now</div>
+                </div>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" 
+                       class="chat-input" 
+                       id="chat-input" 
+                       placeholder="Type your message here..."
+                       maxlength="500">
+                <button class="send-button" id="send-button" onclick="sendMessage()">Send Message</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Reopen Chat Button -->
+    <button class="chat-reopen hidden" id="reopen-button" onclick="reopenChat()">
+        🤖 Reopen AI Chat
+    </button>
+
+    <script>
+        // Hide loading when iframe loads
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        // Chat functionality
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendButton = document.getElementById('send-button');
+        const chatSidebar = document.getElementById('chat-sidebar');
+        const collaboraContainer = document.getElementById('collabora-container');
+        const closeButton = document.getElementById('close-button');
+        const resizeHandle = document.getElementById('resize-handle');
+        const reopenButton = document.getElementById('reopen-button');
+        
+        let isChatClosed = false;
+        let isResizing = false;
+        let startX, startWidth;
+        
+        // Function to close chat completely
+        function closeChat() {
+            isChatClosed = true;
+            chatSidebar.classList.add('closed');
+            collaboraContainer.classList.add('chat-hidden');
+            reopenButton.classList.remove('hidden');
+        }
+        
+        // Function to reopen chat
+        function reopenChat() {
+            isChatClosed = false;
+            chatSidebar.classList.remove('closed');
+            collaboraContainer.classList.remove('chat-hidden');
+            reopenButton.classList.add('hidden');
+        }
+        
+        // Function to reset chat size
+        function resetChatSize() {
+            chatSidebar.style.width = '350px';
+        }
+        
+        // Function to increase chat size manually
+        function increaseChatSize(amount) {
+            const currentWidth = parseInt(getComputedStyle(chatSidebar).width, 10);
+            const newWidth = currentWidth + amount;
+            if (newWidth >= 250 && newWidth <= 800) {
+                chatSidebar.style.width = newWidth + 'px';
+            }
+        }
+        
+        // Resize functionality
+        resizeHandle.addEventListener('mousedown', function(e) {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = parseInt(getComputedStyle(chatSidebar).width, 10);
+            
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            
+            e.preventDefault();
+        });
+        
+        function handleMouseMove(e) {
+            if (!isResizing) return;
+            
+            const deltaX = startX - e.clientX;
+            const newWidth = startWidth + deltaX;
+            
+            // Constrain width between 250px and 600px
+            if (newWidth >= 250 && newWidth <= 600) {
+                chatSidebar.style.width = newWidth + 'px';
+            }
+        }
+        
+        function handleMouseUp() {
+            isResizing = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        }
+        
+        // Function to add a message to the chat
+        function addMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
+            
+            const messageText = document.createElement('div');
+            messageText.textContent = message;
+            
+            const messageTime = document.createElement('div');
+            messageTime.className = 'message-time';
+            messageTime.textContent = new Date().toLocaleTimeString();
+            
+            messageDiv.appendChild(messageText);
+            messageDiv.appendChild(messageTime);
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Function to send a message
+        function sendMessage() {
+            const message = chatInput.value.trim();
+            if (message === '') return;
+            
+            // Add user message
+            addMessage(message, true);
+            
+            // Clear input
+            chatInput.value = '';
+            
+            // Simulate AI thinking (you can remove this later)
+            sendButton.disabled = true;
+            sendButton.textContent = 'Thinking...';
+            
+            // Echo the message back (simple AI response)
+            setTimeout(() => {
+                addMessage(`You said: "${message}"`);
+                sendButton.disabled = false;
+                sendButton.textContent = 'Send Message';
+            }, 1000);
+        }
+        
+        // Allow Enter key to send message
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !sendButton.disabled) {
+                sendMessage();
+            }
+        });
+        
+        // Auto-focus on chat input
+        chatInput.focus();
+    </script>
+</body>
+</html> 
