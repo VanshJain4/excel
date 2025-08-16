@@ -238,7 +238,6 @@
             <iframe 
                 class="collabora-iframe" 
                 id="collabora-iframe"
-                src="http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3000%2Fwopi%2Ffiles%2F123"
                 onload="hideLoading()">
             </iframe>
         </div>
@@ -288,6 +287,23 @@
         function hideLoading() {
             document.getElementById('loading').style.display = 'none';
         }
+        
+        // Get file ID from URL parameters
+        function getFileIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('fileId') || '123'; // Default to '123' if no fileId provided
+        }
+        
+        // Update iframe src with the correct file ID
+        function updateIframeSrc() {
+            const fileId = getFileIdFromUrl();
+            const iframe = document.getElementById('collabora-iframe');
+            const wopiUrl = `http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3000%2Fwopi%2Ffiles%2F${fileId}`;
+            iframe.src = wopiUrl;
+        }
+        
+        // Initialize with the correct file
+        updateIframeSrc();
         
         // Chat functionality
         const chatMessages = document.getElementById('chat-messages');

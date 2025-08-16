@@ -152,7 +152,7 @@ const Dashboard = () => {
   };
 
   const openFileInLibreOffice = (file) => {
-    // This will be integrated with your LibreOffice app
+    // Open file in LibreOffice with the file ID
     const libreOfficeUrl = `http://localhost:3000/collabora-with-chat.html?fileId=${file.id}`;
     window.open(libreOfficeUrl, '_blank');
   };
@@ -383,7 +383,7 @@ const Dashboard = () => {
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={() => window.open(`http://localhost:5000/api/files/${file.id}/download`, '_blank')}
+                          onClick={() => window.open(`http://localhost:5001/api/files/${file.id}/download`, '_blank')}
                           title="Download"
                         >
                           <DownloadIcon />

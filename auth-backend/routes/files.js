@@ -67,6 +67,56 @@ const upload = multer({
   }
 });
 
+// WOPI endpoint: return file info (no authentication required)
+router.get('/wopi/:fileId', async (req, res) => {
+  try {
+    const fileId = req.params.fileId;
+    const file = await File.findById(fileId);
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    res.json({
+      BaseFileName: file.originalName,
+      Size: file.fileSize,
+      OwnerId: file.userId.toString(),
+      Version: "1",
+      SupportsUpdate: true,
+      UserCanWrite: true
+    });
+  } catch (error) {
+    console.error('Error fetching file info for WOPI:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// WOPI endpoint: return file content (no authentication required)
+router.get('/wopi/:fileId/contents', async (req, res) => {
+  try {
+    const fileId = req.params.fileId;
+    const file = await File.findById(fileId);
+    
+    if (!file) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    const filePath = path.join(__dirname, '../uploads', file.filePath);
+    
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ error: 'File not found on disk' });
+    }
+
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${file.originalName}"`);
+    
+    fs.createReadStream(filePath).pipe(res);
+  } catch (error) {
+    console.error('Error fetching file content for WOPI:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Get all files for current user
 router.get('/', isAuthenticated, async (req, res) => {
   try {
