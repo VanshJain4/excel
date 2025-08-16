@@ -19,7 +19,6 @@ import {
   ListItem,
   ListItemText,
   ListItemIcon,
-  ListItemSecondaryAction,
   Chip,
   Dialog,
   DialogTitle,
@@ -250,12 +249,12 @@ const Dashboard = () => {
           </Alert>
         )}
 
-        <Grid container spacing={3}>
+        <Grid container spacing={3} justifyContent="center">
           {/* Top Row - Welcome and Quick Actions */}
-          <Grid container item spacing={3}>
+          <Grid container item spacing={3} xs={12} md={10} lg={8}>
             {/* Welcome Card */}
-            <Grid item xs={12} md={8}>
-              <Card sx={{ height: '100%' }}>
+            <Grid item xs={12} md={6}>
+              <Card sx={{ height: '100%', minHeight: 200 }}>
                 <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar
@@ -282,12 +281,12 @@ const Dashboard = () => {
             </Grid>
 
             {/* Quick Actions */}
-            <Grid item xs={12} md={4}>
-              <Paper sx={{ p: 3, height: '100%' }}>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 3, height: '100%', minHeight: 200 }}>
                 <Typography variant="h6" gutterBottom>
                   Quick Actions
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center', height: 'calc(100% - 40px)' }}>
                   <Button
                     variant="contained"
                     startIcon={<AddIcon />}
@@ -314,7 +313,7 @@ const Dashboard = () => {
           </Grid>
 
           {/* Bottom Row - Your Files */}
-          <Grid item xs={12}>
+          <Grid item xs={12} md={10} lg={8} sx={{ mt: 3 }}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Your Files
@@ -343,7 +342,7 @@ const Dashboard = () => {
               ) : (
                 <List>
                   {files.map((file) => (
-                    <ListItem key={file.id} divider>
+                    <ListItem key={file.id} divider sx={{ pr: 8 }}>
                       <ListItemIcon>
                         <TableChart color="primary" />
                       </ListItemIcon>
@@ -374,32 +373,30 @@ const Dashboard = () => {
                           </Box>
                         }
                       />
-                      <ListItemSecondaryAction>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                          <IconButton
-                            size="small"
-                            onClick={() => openFileInLibreOffice(file)}
-                            title="Open in LibreOffice"
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => window.open(`http://localhost:5000/api/files/${file.id}/download`, '_blank')}
-                            title="Download"
-                          >
-                            <DownloadIcon />
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            onClick={() => handleDeleteFile(file.id)}
-                            title="Delete"
-                            color="error"
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Box>
-                      </ListItemSecondaryAction>
+                      <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => openFileInLibreOffice(file)}
+                          title="Open in LibreOffice"
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => window.open(`http://localhost:5000/api/files/${file.id}/download`, '_blank')}
+                          title="Download"
+                        >
+                          <DownloadIcon />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteFile(file.id)}
+                          title="Delete"
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Box>
                     </ListItem>
                   ))}
                 </List>
