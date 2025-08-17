@@ -102,22 +102,24 @@
         /* Custom Save Button Styles */
         .save-button {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 5px;
+            left: 45px;
             z-index: 1000;
             background: #0f6803;
             color: white;
             border: none;
-            border-radius: 5px;
-            padding: 12px 20px;
-            font-size: 14px;
+            border-radius: 3px;
+            padding: 8px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
-            gap: 8px;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
         }
         
         .save-button:hover {
@@ -341,9 +343,9 @@
 </head>
 <body>
     <!-- Custom Save Button -->
-    <button class="save-button" id="save-button" onclick="saveFile()">
+    <button class="save-button" id="save-button" onclick="saveFile()" title="Save File">
         <div class="spinner"></div>
-        <span class="save-text">💾 Save File</span>
+        <span class="save-text">💾</span>
     </button>
     
     <div class="container">
