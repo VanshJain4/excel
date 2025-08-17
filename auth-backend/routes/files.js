@@ -295,6 +295,52 @@ router.delete('/:fileId', isAuthenticated, async (req, res) => {
   }
 });
 
+// Custom save endpoint - overwrite existing file (no authentication for now)
+router.post('/:fileId/save', async (req, res) => {
+  try {
+    const fileId = req.params.fileId;
+    
+    // Find the existing file (no user check for now)
+    const existingFile = await File.findById(fileId);
+
+    if (!existingFile) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+
+    // Get the file from the request body (raw data)
+    const fileData = req.body;
+    
+    if (!fileData || fileData.length === 0) {
+      return res.status(400).json({ error: 'No file data received' });
+    }
+
+    // Get the existing file path
+    const existingFilePath = path.join(__dirname, '../uploads', existingFile.filePath);
+    
+    // Write the new file data directly to the existing file path
+    fs.writeFileSync(existingFilePath, fileData);
+    
+    // Update file metadata
+    const stats = fs.statSync(existingFilePath);
+    existingFile.fileSize = stats.size;
+    existingFile.updatedAt = new Date();
+    await existingFile.save();
+
+    console.log(`File ${fileId} saved successfully, new size: ${stats.size} bytes`);
+
+    res.json({
+      success: true,
+      message: 'File saved successfully',
+      fileId: fileId,
+      fileSize: stats.size
+    });
+
+  } catch (error) {
+    console.error('Error saving file:', error);
+    res.status(500).json({ error: 'Failed to save file' });
+  }
+});
+
 // Error handling middleware for multer
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {

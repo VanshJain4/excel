@@ -3,6 +3,41 @@
 <head>
     <meta charset="utf-8">
     <title>LibreOffice Calc with AI Assistant</title>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAV8EITshJJO_-NGkBOMiU3gIIMs0vZirQ",
+            authDomain: "skopeo-ai.firebaseapp.com",
+            projectId: "skopeo-ai",
+            storageBucket: "skopeo-ai.firebasestorage.app",
+            messagingSenderId: "295265049654",
+            appId: "1:295265049654:web:486856ccde50928efe8c97",
+            measurementId: "G-S7Y1FDBM6L"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Make Firebase available globally
+        window.auth = auth;
+        window.db = db;
+        window.doc = doc;
+        window.updateDoc = updateDoc;
+        window.serverTimestamp = serverTimestamp;
+        
+        // Listen for auth state changes
+        auth.onAuthStateChanged((user) => {
+            window.currentUser = user;
+        });
+    </script>
     <style>
         html, body {
             margin: 0; padding: 0;
@@ -44,6 +79,62 @@
             overflow: hidden;
         }
         .chat-sidebar.closed {
+            display: none;
+        }
+        
+        /* Custom Save Button Styles */
+        .save-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: #0f6803;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .save-button:hover {
+            background: #0a4d02;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .save-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .save-button .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .save-button.saving .spinner {
+            display: inline-block;
+        }
+        
+        .save-button.saving .save-text {
             display: none;
         }
         .chat-header {
@@ -232,6 +323,12 @@
     </style>
 </head>
 <body>
+    <!-- Custom Save Button -->
+    <button class="save-button" id="save-button" onclick="saveFile()">
+        <div class="spinner"></div>
+        <span class="save-text">💾 Save File</span>
+    </button>
+    
     <div class="container">
         <div class="collabora-container" id="collabora-container">
             <div class="loading" id="loading">Loading LibreOffice Calc...</div>
@@ -298,12 +395,114 @@
         function updateIframeSrc() {
             const fileId = getFileIdFromUrl();
             const iframe = document.getElementById('collabora-iframe');
-            const wopiUrl = `http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3000%2Fwopi%2Ffiles%2F${fileId}`;
+            const wopiUrl = `http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3002%2Fwopi%2Ffiles%2F${fileId}`;
             iframe.src = wopiUrl;
         }
         
         // Initialize with the correct file
         updateIframeSrc();
+        
+        // Custom Save Function - Firebase base64 approach
+        async function saveFile() {
+            const saveButton = document.getElementById('save-button');
+            const fileId = getFileIdFromUrl();
+            
+            // Don't save if it's the empty file
+            if (fileId === 'empty') {
+                alert('Please upload a file first before saving.');
+                return;
+            }
+            
+            // Check if user is logged in
+            if (!currentUser) {
+                alert('Please log in first');
+                return;
+            }
+            
+            try {
+                // Show saving state
+                saveButton.classList.add('saving');
+                saveButton.disabled = true;
+                
+                // Get the current file from LibreOffice
+                const iframe = document.getElementById('collabora-iframe');
+                const iframeWindow = iframe.contentWindow;
+                
+                // Trigger LibreOffice to save its current state to WOPI server
+                iframeWindow.postMessage({
+                    type: 'save',
+                    action: 'save'
+                }, '*');
+                
+                // Wait for LibreOffice to save to WOPI server
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                
+                // Now download the saved file from WOPI server
+                const response = await fetch(`http://localhost:3002/wopi/files/${fileId}/contents?nocache=${Date.now()}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to get current file content');
+                }
+                
+                const fileBlob = await response.blob();
+                
+                // Convert blob to base64
+                const base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(fileBlob);
+                });
+                
+                // Update file in Firebase Firestore
+                const fileDoc = doc(db, 'files', fileId);
+                await updateDoc(fileDoc, {
+                    fileContent: base64,
+                    fileSize: fileBlob.size,
+                    updatedAt: serverTimestamp()
+                });
+                
+                // Show success message
+                showMessage('File saved to Firebase successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Save error:', error);
+                showMessage('Failed to save file: ' + error.message, 'error');
+            } finally {
+                // Reset button state
+                saveButton.classList.remove('saving');
+                saveButton.disabled = false;
+            }
+        }
+        
+        // Show message function
+        function showMessage(message, type = 'info') {
+            // Create a temporary message element
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 80px;
+                left: 20px;
+                z-index: 1001;
+                padding: 12px 20px;
+                border-radius: 5px;
+                color: white;
+                font-weight: bold;
+                background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: opacity 0.3s ease;
+            `;
+            messageDiv.textContent = message;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(messageDiv);
+                }, 300);
+            }, 3000);
+        }
         
         // Chat functionality
         const chatMessages = document.getElementById('chat-messages');

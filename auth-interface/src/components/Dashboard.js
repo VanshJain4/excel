@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Card,
@@ -41,10 +41,11 @@ import {
   Edit as EditIcon,
   Description
 } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { uploadFile, getUserFiles, deleteFile } from '../services/firebaseFileService';
 
 const Dashboard = () => {
-  const { currentUser, logout, getUserFiles, uploadFile, deleteFile } = useAuth();
+  const { user, logout } = useFirebaseAuth();
   const [anchorEl, setAnchorEl] = useState(null);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,20 +57,31 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const loadUserFiles = useCallback(async () => {
-    setLoading(true);
-    const result = await getUserFiles();
-    if (result.success) {
-      setFiles(result.files);
-    } else {
-      setError(result.error);
-    }
-    setLoading(false);
-  }, [getUserFiles]);
-
+  // Set up real-time listener for user files
   useEffect(() => {
-    loadUserFiles();
-  }, [loadUserFiles]);
+    if (!user) return;
+
+    setLoading(true);
+    
+    console.log('Setting up file listener for user:', user.uid);
+    
+    // Subscribe to real-time updates
+    const unsubscribe = getUserFiles(user.uid, (files) => {
+      console.log('Received files:', files.length);
+      setFiles(files);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error in file listener:', error);
+      setError('Failed to load files: ' + error.message);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('Cleaning up file listener');
+      unsubscribe();
+    };
+  }, [user]);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -117,24 +129,18 @@ const Dashboard = () => {
     setError('');
 
     try {
-      const tags = fileTags.split(',').map(tag => tag.trim()).filter(tag => tag);
-      const result = await uploadFile(selectedFile, fileDescription, tags);
+      await uploadFile(selectedFile, user.uid, fileDescription);
 
-      if (result.success) {
-        setUploadDialogOpen(false);
-        setSelectedFile(null);
-        setFileDescription('');
-        setFileTags('');
-        setSuccess('File uploaded successfully!');
-        loadUserFiles(); // Refresh file list
-        // Clear success message after 3 seconds
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(result.error || 'Upload failed. Please try again.');
-      }
+      setUploadDialogOpen(false);
+      setSelectedFile(null);
+      setFileDescription('');
+      setFileTags('');
+      setSuccess('File uploaded successfully!');
+      // Clear success message after 3 seconds
+      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
       console.error('Upload error:', error);
-      setError('An unexpected error occurred during upload. Please try again.');
+      setError(error.message || 'An unexpected error occurred during upload. Please try again.');
     } finally {
       setUploading(false);
     }
@@ -142,19 +148,58 @@ const Dashboard = () => {
 
   const handleDeleteFile = async (fileId) => {
     if (window.confirm('Are you sure you want to delete this file?')) {
-      const result = await deleteFile(fileId);
-      if (result.success) {
-        loadUserFiles(); // Refresh file list
-      } else {
-        setError(result.error);
+      try {
+        await deleteFile(fileId);
+        // File list will automatically update via real-time listener
+      } catch (error) {
+        setError(error.message || 'Failed to delete file');
       }
     }
   };
 
   const openFileInLibreOffice = (file) => {
     // Open file in LibreOffice with the file ID
-    const libreOfficeUrl = `http://localhost:3000/collabora-with-chat.html?fileId=${file.id}`;
+    const libreOfficeUrl = `http://localhost:3002/collabora-with-chat.html?fileId=${file.id}`;
     window.open(libreOfficeUrl, '_blank');
+  };
+
+  const handleDownloadFile = (file) => {
+    try {
+      // Convert base64 to blob
+      const base64Data = file.fileContent;
+      if (!base64Data) {
+        setError('File content not available');
+        return;
+      }
+
+      // Remove data URL prefix if present
+      const base64 = base64Data.includes(',') ? base64Data.split(',')[1] : base64Data;
+      
+      // Convert base64 to blob
+      const byteCharacters = atob(base64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: file.mimeType });
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = file.originalName || file.fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      setSuccess('File downloaded successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Download error:', error);
+      setError('Failed to download file');
+    }
   };
 
   const formatFileSize = (bytes) => {
@@ -165,8 +210,16 @@ const Dashboard = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString();
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Unknown date';
+    
+    // Handle Firestore timestamp
+    if (timestamp.toDate) {
+      return timestamp.toDate().toLocaleDateString();
+    }
+    
+    // Handle regular date string
+    return new Date(timestamp).toLocaleDateString();
   };
 
   return (
@@ -180,7 +233,7 @@ const Dashboard = () => {
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography variant="body2" sx={{ mr: 2 }}>
-              Welcome, {currentUser?.name}
+              Welcome, {user?.displayName || user?.email}
             </Typography>
             <IconButton
               size="large"
@@ -191,11 +244,11 @@ const Dashboard = () => {
               color="inherit"
             >
               <Avatar
-                src={currentUser?.avatar}
-                alt={currentUser?.name}
+                src={user?.photoURL}
+                alt={user?.displayName}
                 sx={{ width: 32, height: 32 }}
               >
-                {currentUser?.name?.charAt(0)}
+                {user?.displayName?.charAt(0) || user?.email?.charAt(0)}
               </Avatar>
             </IconButton>
             <Menu
@@ -243,36 +296,31 @@ const Dashboard = () => {
             {success}
           </Alert>
         )}
-        {success && (
-          <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
-            {success}
-          </Alert>
-        )}
 
         <Grid container spacing={3} justifyContent="center">
           {/* Top Row - Welcome and Quick Actions */}
-          <Grid container item spacing={3} xs={12} md={10} lg={8}>
+          <Grid container spacing={3} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' } }}>
             {/* Welcome Card */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Card sx={{ height: '100%', minHeight: 200 }}>
                 <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar
-                      src={currentUser?.avatar}
-                      alt={currentUser?.name}
+                      src={user?.photoURL}
+                      alt={user?.displayName}
                       sx={{ width: 64, height: 64, mr: 2 }}
                     >
-                      {currentUser?.name?.charAt(0)}
+                      {user?.displayName?.charAt(0) || user?.email?.charAt(0)}
                     </Avatar>
                     <Box>
                       <Typography variant="h5" gutterBottom>
-                        Welcome back, {currentUser?.name}!
+                        Welcome back, {user?.displayName || 'User'}!
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        You're signed in as {currentUser?.email}
+                        You're signed in as {user?.email}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        Provider: {currentUser?.provider}
+                        Provider: {user?.providerData?.[0]?.providerId || 'Unknown'}
                       </Typography>
                     </Box>
                   </Box>
@@ -281,7 +329,7 @@ const Dashboard = () => {
             </Grid>
 
             {/* Quick Actions */}
-            <Grid item xs={12} md={6}>
+            <Grid size={{ xs: 12, md: 6 }}>
               <Paper sx={{ p: 3, height: '100%', minHeight: 200 }}>
                 <Typography variant="h6" gutterBottom>
                   Quick Actions
@@ -303,7 +351,7 @@ const Dashboard = () => {
                     size="large"
                     fullWidth
                     sx={{ py: 2 }}
-                    onClick={() => window.open('http://localhost:3000', '_blank')}
+                    onClick={() => window.open('http://localhost:3002', '_blank')}
                   >
                     Open LibreOffice Calc
                   </Button>
@@ -313,7 +361,7 @@ const Dashboard = () => {
           </Grid>
 
           {/* Bottom Row - Your Files */}
-          <Grid item xs={12} md={10} lg={8} sx={{ mt: 3 }}>
+          <Grid size={12} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' }, mt: 3 }}>
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Your Files
@@ -346,33 +394,31 @@ const Dashboard = () => {
                       <ListItemIcon>
                         <TableChart color="primary" />
                       </ListItemIcon>
-                      <ListItemText
-                        primary={file.originalName}
-                        secondary={
-                          <Box>
-                            <Typography variant="body2" color="text.secondary">
-                              {formatFileSize(file.fileSize)} • {formatDate(file.createdAt)}
-                            </Typography>
-                            {file.description && (
-                              <Typography variant="body2" color="text.secondary">
-                                {file.description}
-                              </Typography>
-                            )}
-                            {file.tags && file.tags.length > 0 && (
-                              <Box sx={{ mt: 1 }}>
-                                {file.tags.map((tag, index) => (
-                                  <Chip
-                                    key={index}
-                                    label={tag}
-                                    size="small"
-                                    sx={{ mr: 0.5, mb: 0.5 }}
-                                  />
-                                ))}
-                              </Box>
-                            )}
+                      <Box sx={{ flexGrow: 1, ml: 2 }}>
+                        <Typography variant="body1" component="div" fontWeight="medium">
+                          {file.originalName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" component="div">
+                          {formatFileSize(file.fileSize)} • {formatDate(file.createdAt)}
+                        </Typography>
+                        {file.description && (
+                          <Typography variant="body2" color="text.secondary" component="div">
+                            {file.description}
+                          </Typography>
+                        )}
+                        {file.tags && file.tags.length > 0 && (
+                          <Box sx={{ mt: 1 }}>
+                            {file.tags.map((tag, index) => (
+                              <Chip
+                                key={index}
+                                label={tag}
+                                size="small"
+                                sx={{ mr: 0.5, mb: 0.5 }}
+                              />
+                            ))}
                           </Box>
-                        }
-                      />
+                        )}
+                      </Box>
                       <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
                         <IconButton
                           size="small"
@@ -383,7 +429,7 @@ const Dashboard = () => {
                         </IconButton>
                         <IconButton
                           size="small"
-                          onClick={() => window.open(`http://localhost:5001/api/files/${file.id}/download`, '_blank')}
+                          onClick={() => handleDownloadFile(file)}
                           title="Download"
                         >
                           <DownloadIcon />

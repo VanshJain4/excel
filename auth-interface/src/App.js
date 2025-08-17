@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { FirebaseAuthProvider, useFirebaseAuth } from './contexts/FirebaseAuthContext';
 import Login from './components/Login';
 import Register from './components/Register';
 import Dashboard from './components/Dashboard';
@@ -59,21 +59,31 @@ const theme = createTheme({
 
 // Protected Route component
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  const { user, loading } = useFirebaseAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  return user ? children : <Navigate to="/login" replace />;
 };
 
 // Public Route component (redirects to dashboard if already authenticated)
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Navigate to="/dashboard" replace /> : children;
+  const { user, loading } = useFirebaseAuth();
+  
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+  
+  return user ? <Navigate to="/dashboard" replace /> : children;
 };
 
 function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
+      <FirebaseAuthProvider>
         <Router>
           <div className="App">
             <Routes>
@@ -96,7 +106,7 @@ function App() {
             </Routes>
           </div>
         </Router>
-      </AuthProvider>
+              </FirebaseAuthProvider>
     </ThemeProvider>
   );
 }

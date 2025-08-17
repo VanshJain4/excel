@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>LibreOffice Calc with Firebase Save</title>
+    <style>
+        html, body {
+            margin: 0; padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .collabora-container {
+            flex: 1;
+            position: relative;
+        }
+        .collabora-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        /* Firebase Save Button Styles */
+        .save-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: #0f6803;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .save-button:hover {
+            background: #0a4d02;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        
+        .save-button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .save-button .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .save-button.saving .spinner {
+            display: inline-block;
+        }
+        
+        .save-button.saving .save-text {
+            display: none;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <!-- Firebase Save Button -->
+    <button class="save-button" id="save-button" onclick="saveToFirebase()">
+        <div class="spinner"></div>
+        <span class="save-text">💾 Save to Firebase</span>
+    </button>
+    
+    <div class="container">
+        <div class="collabora-container" id="collabora-container">
+            <div class="loading" id="loading">Loading LibreOffice Calc...</div>
+            <iframe 
+                class="collabora-iframe" 
+                id="collabora-iframe">
+            </iframe>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { getFirestore, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        import { getStorage, ref, uploadBytes, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAV8EITshJJO_-NGkBOMiU3gIIMs0vZirQ",
+            authDomain: "skopeo-ai.firebaseapp.com",
+            projectId: "skopeo-ai",
+            storageBucket: "skopeo-ai.firebasestorage.app",
+            messagingSenderId: "295265049654",
+            appId: "1:295265049654:web:486856ccde50928efe8c97",
+            measurementId: "G-S7Y1FDBM6L"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const storage = getStorage(app);
+
+        // Global variables
+        let currentUser = null;
+        let currentFileId = null;
+
+        // Check authentication state
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                console.log('User is signed in:', user.email);
+            } else {
+                console.log('User is signed out');
+            }
+        });
+
+        // Get file ID from URL parameters
+        function getFileIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('fileId') || '123';
+        }
+
+        // Update iframe src with the correct file ID
+        function updateIframeSrc() {
+            const fileId = getFileIdFromUrl();
+            currentFileId = fileId;
+            const iframe = document.getElementById('collabora-iframe');
+            const wopiUrl = `http://localhost:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2Fhost.docker.internal%3A3002%2Fwopi%2Ffiles%2F${fileId}`;
+            iframe.src = wopiUrl;
+        }
+
+        // Save to Firebase function
+        window.saveToFirebase = async function() {
+            const saveButton = document.getElementById('save-button');
+            
+            if (!currentUser) {
+                alert('Please log in first');
+                return;
+            }
+
+            if (!currentFileId || currentFileId === 'empty') {
+                alert('Please upload a file first');
+                return;
+            }
+
+            try {
+                // Show saving state
+                saveButton.classList.add('saving');
+                saveButton.disabled = true;
+
+                // Get the current file from LibreOffice
+                const iframe = document.getElementById('collabora-iframe');
+                const iframeWindow = iframe.contentWindow;
+
+                // Trigger LibreOffice to save
+                iframeWindow.postMessage({
+                    type: 'save',
+                    action: 'save'
+                }, '*');
+
+                // Wait for LibreOffice to save
+                await new Promise(resolve => setTimeout(resolve, 3000));
+
+                // Download the file from WOPI server
+                const response = await fetch(`http://localhost:3002/wopi/files/${currentFileId}/contents?nocache=${Date.now()}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to get file content');
+                }
+
+                const fileBlob = await response.blob();
+                
+                // Create a file object
+                const file = new File([fileBlob], 'spreadsheet.xlsx', { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+                // Upload to Firebase Storage
+                const timestamp = Date.now();
+                const fileName = `${currentUser.uid}/${timestamp}-spreadsheet.xlsx`;
+                const storageRef = ref(storage, fileName);
+                
+                await uploadBytes(storageRef, file);
+                const downloadURL = await getDownloadURL(storageRef);
+
+                // Update Firestore document
+                const fileDoc = doc(db, 'files', currentFileId);
+                await updateDoc(fileDoc, {
+                    filePath: fileName,
+                    fileSize: file.size,
+                    downloadURL: downloadURL,
+                    updatedAt: serverTimestamp()
+                });
+
+                // Show success message
+                showMessage('File saved to Firebase successfully!', 'success');
+
+            } catch (error) {
+                console.error('Save error:', error);
+                showMessage('Failed to save file: ' + error.message, 'error');
+            } finally {
+                // Reset button state
+                saveButton.classList.remove('saving');
+                saveButton.disabled = false;
+            }
+        };
+
+        // Show message function
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 80px;
+                left: 20px;
+                z-index: 1001;
+                padding: 12px 20px;
+                border-radius: 5px;
+                color: white;
+                font-weight: bold;
+                background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                transition: opacity 0.3s ease;
+            `;
+            messageDiv.textContent = message;
+            
+            document.body.appendChild(messageDiv);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                messageDiv.style.opacity = '0';
+                setTimeout(() => {
+                    document.body.removeChild(messageDiv);
+                }, 300);
+            }, 3000);
+        }
+
+        // Hide loading when iframe loads
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateIframeSrc();
+            
+            // Add load event listener to iframe
+            const iframe = document.getElementById('collabora-iframe');
+            iframe.addEventListener('load', function() {
+                hideLoading();
+            });
+        });
+    </script>
+</body>
+</html>

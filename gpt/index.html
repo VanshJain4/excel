@@ -79,7 +79,7 @@
                 </ul>
             </div>
             
-            <a href="http://localhost:3000/collabora-with-chat.html" 
+            <a href="http://localhost:3002/collabora-with-chat.html" 
                target="_blank" 
                class="button">
                 Open Excel File with AI Assistant
@@ -104,15 +104,15 @@
             <div class="info">
                 <h3>Alternative Links:</h3>
                 <p><a href="http://localhost:9980/hosting/capabilities" target="_blank">Collabora Capabilities</a></p>
-                <p><a href="http://localhost:3000/wopi/files/123" target="_blank">WOPI File Info</a></p>
-                <p><a href="http://localhost:3000/wopi/files/123/contents" target="_blank">Download Excel File</a></p>
+                <p><a href="http://localhost:3002/wopi/files/123" target="_blank">WOPI File Info</a></p>
+<p><a href="http://localhost:3002/wopi/files/123/contents" target="_blank">Download Excel File</a></p>
             </div>
         </div>
     </div>
 
     <script>
         // Check WOPI server status only
-        fetch('http://localhost:3000/wopi/files/123')
+        fetch('http://localhost:3002/wopi/files/123')
             .then(response => response.json())
             .then(data => {
                 document.getElementById('wopi-status').textContent = '✅ Running';

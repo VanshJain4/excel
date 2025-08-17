@@ -15,7 +15,7 @@ import {
   Avatar
 } from '@mui/material';
 import { Google as GoogleIcon, Email as EmailIcon } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -24,7 +24,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   
-  const { login, loginWithGoogle } = useAuth();
+  const { signInWithEmail, signInWithGoogle } = useFirebaseAuth();
   const navigate = useNavigate();
 
   const handleEmailLogin = async (e) => {
@@ -39,14 +39,10 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const result = await login(email, password);
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setError(result.error || 'Failed to login');
-      }
+      await signInWithEmail(email, password);
+      navigate('/dashboard');
     } catch (error) {
-      setError('An unexpected error occurred');
+      setError(error.message || 'Failed to login');
     } finally {
       setLoading(false);
     }
@@ -57,14 +53,10 @@ const Login = () => {
     setGoogleLoading(true);
 
     try {
-      const result = await loginWithGoogle();
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setError(result.error || 'Failed to login with Google');
-      }
+      await signInWithGoogle();
+      navigate('/dashboard');
     } catch (error) {
-      setError('An unexpected error occurred');
+      setError(error.message || 'Failed to login with Google');
     } finally {
       setGoogleLoading(false);
     }
