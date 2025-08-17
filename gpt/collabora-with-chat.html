@@ -33,9 +33,26 @@
         window.updateDoc = updateDoc;
         window.serverTimestamp = serverTimestamp;
         
-        // Listen for auth state changes
+        // Get user info from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const userId = urlParams.get('userId');
+        const userEmail = urlParams.get('userEmail');
+        
+        // Create a mock user object from URL parameters
+        if (userId && userEmail) {
+            window.currentUser = {
+                uid: userId,
+                email: userEmail,
+                displayName: userEmail.split('@')[0] // Use email prefix as display name
+            };
+            console.log('User info from URL:', window.currentUser);
+        }
+        
+        // Listen for auth state changes (fallback)
         auth.onAuthStateChanged((user) => {
-            window.currentUser = user;
+            if (!window.currentUser) {
+                window.currentUser = user;
+            }
         });
     </script>
     <style>
@@ -407,6 +424,9 @@
             const saveButton = document.getElementById('save-button');
             const fileId = getFileIdFromUrl();
             
+            console.log('Save attempt - File ID:', fileId);
+            console.log('Current user:', currentUser);
+            
             // Don't save if it's the empty file
             if (fileId === 'empty') {
                 alert('Please upload a file first before saving.');
@@ -415,7 +435,8 @@
             
             // Check if user is logged in
             if (!currentUser) {
-                alert('Please log in first');
+                console.error('No user found for save operation');
+                alert('Please log in first. If you are already logged in, try refreshing the page.');
                 return;
             }
             
@@ -438,6 +459,7 @@
                 await new Promise(resolve => setTimeout(resolve, 3000));
                 
                 // Now download the saved file from WOPI server
+                console.log('Downloading file from WOPI server...');
                 const response = await fetch(`http://localhost:3002/wopi/files/${fileId}/contents?nocache=${Date.now()}`);
                 
                 if (!response.ok) {
@@ -445,6 +467,8 @@
                 }
                 
                 const fileBlob = await response.blob();
+                console.log('Downloaded file size:', fileBlob.size);
+                console.log('Downloaded file type:', fileBlob.type);
                 
                 // Convert blob to base64
                 const base64 = await new Promise((resolve) => {
@@ -461,8 +485,12 @@
                     updatedAt: serverTimestamp()
                 });
                 
+                console.log('File updated in Firebase:', fileId);
+                console.log('New file size:', fileBlob.size);
+                console.log('Base64 length:', base64.length);
+                
                 // Show success message
-                showMessage('File saved to Firebase successfully!', 'success');
+                showMessage('File saved to Firebase successfully! Please refresh your dashboard to see the changes.', 'success');
                 
             } catch (error) {
                 console.error('Save error:', error);

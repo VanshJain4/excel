@@ -5,6 +5,7 @@ import {
   deleteDoc, 
   doc, 
   getDoc,
+  getDocs,
   query, 
   where, 
   orderBy,
@@ -150,6 +151,39 @@ export const getFileDownloadURL = async (fileId) => {
     throw new Error('File not found');
   } catch (error) {
     console.error('Error getting file content:', error);
+    throw error;
+  }
+};
+
+// Manual fetch user files (for refresh functionality)
+export const fetchUserFiles = async (userId) => {
+  try {
+    const q = query(
+      filesCollection,
+      where('userId', '==', userId)
+    );
+    
+    const snapshot = await getDocs(q);
+    const files = [];
+    
+    snapshot.forEach((doc) => {
+      files.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    // Sort by createdAt
+    files.sort((a, b) => {
+      if (a.createdAt && b.createdAt) {
+        return b.createdAt.toDate() - a.createdAt.toDate();
+      }
+      return 0;
+    });
+    
+    return files;
+  } catch (error) {
+    console.error('Error fetching user files:', error);
     throw error;
   }
 };

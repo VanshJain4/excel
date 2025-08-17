@@ -212,6 +212,22 @@ app.get("/wopi/files/:id/contents", async (req, res) => {
             return;
         }
         
+        // Check if we have updated content from WOPI save
+        if (global.tempFileStorage && global.tempFileStorage.has(fileId)) {
+            const tempData = global.tempFileStorage.get(fileId);
+            console.log(`Serving updated content from WOPI save: ${fileId}, size: ${tempData.size} bytes`);
+            
+            // Set appropriate headers
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            res.setHeader('Content-Length', tempData.size);
+            res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
+            
+            res.send(tempData.content);
+            return;
+        }
+        
         // Fetch actual file from Firebase
         const fileData = await fetchFileFromFirebase(fileId);
         
@@ -284,8 +300,21 @@ app.post("/wopi/files/:id/contents", async (req, res) => {
         
         console.log(`WOPI: Saving file ${fileId}, content length: ${fileContent.length} bytes`);
         
-        // For now, just acknowledge the save
-        // The actual saving will be handled by the Firebase save button in the UI
+        // Store the updated content temporarily so it can be retrieved
+        // This will be used when the Firebase save button downloads the content
+        if (!global.tempFileStorage) {
+            global.tempFileStorage = new Map();
+        }
+        
+        // Store the updated content with timestamp
+        global.tempFileStorage.set(fileId, {
+            content: fileContent,
+            timestamp: Date.now(),
+            size: fileContent.length
+        });
+        
+        console.log(`WOPI: Stored updated content for ${fileId}, size: ${fileContent.length} bytes`);
+        
         res.sendStatus(200);
     } catch (error) {
         console.error("Error saving file:", error);
@@ -309,15 +338,19 @@ app.get("/debug/files", async (req, res) => {
                 fileName: doc.fields?.fileName?.stringValue || doc.fields?.originalName?.stringValue,
                 fileSize: doc.fields?.fileSize?.integerValue,
                 userId: doc.fields?.userId?.stringValue,
-                hasContent: !!doc.fields?.fileContent?.stringValue
+                hasContent: !!doc.fields?.fileContent?.stringValue,
+                createdAt: doc.fields?.createdAt?.timestampValue,
+                updatedAt: doc.fields?.updatedAt?.timestampValue,
+                base64Length: doc.fields?.fileContent?.stringValue?.length || 0
             }));
             
             res.json({
                 totalFiles: files.length,
-                files: files
+                files: files,
+                timestamp: new Date().toISOString()
             });
         } else {
-            res.json({ totalFiles: 0, files: [] });
+            res.json({ totalFiles: 0, files: [], timestamp: new Date().toISOString() });
         }
     } catch (error) {
         console.error('Error listing files:', error);

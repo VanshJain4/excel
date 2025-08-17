@@ -39,10 +39,11 @@ import {
   Delete as DeleteIcon,
   Download as DownloadIcon,
   Edit as EditIcon,
-  Description
+  Description,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
-import { uploadFile, getUserFiles, deleteFile } from '../services/firebaseFileService';
+import { uploadFile, getUserFiles, deleteFile, fetchUserFiles } from '../services/firebaseFileService';
 
 const Dashboard = () => {
   const { user, logout } = useFirebaseAuth();
@@ -56,6 +57,7 @@ const Dashboard = () => {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   // Set up real-time listener for user files
   useEffect(() => {
@@ -68,6 +70,26 @@ const Dashboard = () => {
     // Subscribe to real-time updates
     const unsubscribe = getUserFiles(user.uid, (files) => {
       console.log('Received files:', files.length);
+      console.log('Real-time listener file details:', files.map(f => ({ 
+        id: f.id, 
+        fileName: f.fileName, 
+        fileSize: f.fileSize, 
+        updatedAt: f.updatedAt,
+        hasContent: !!f.fileContent,
+        contentLength: f.fileContent?.length || 0
+      })));
+      
+      // Log individual file details for better visibility
+      files.forEach((file, index) => {
+        console.log(`Real-time File ${index + 1}:`, {
+          id: file.id,
+          fileName: file.fileName,
+          fileSize: file.fileSize,
+          updatedAt: file.updatedAt,
+          hasContent: !!file.fileContent,
+          contentLength: file.fileContent?.length || 0
+        });
+      });
       setFiles(files);
       setLoading(false);
     }, (error) => {
@@ -158,9 +180,60 @@ const Dashboard = () => {
   };
 
   const openFileInLibreOffice = (file) => {
-    // Open file in LibreOffice with the file ID
-    const libreOfficeUrl = `http://localhost:3002/collabora-with-chat.html?fileId=${file.id}`;
+    // Open file in LibreOffice with the file ID and user info
+    const libreOfficeUrl = `http://localhost:3002/collabora-with-chat.html?fileId=${file.id}&userId=${user.uid}&userEmail=${encodeURIComponent(user.email || '')}`;
     window.open(libreOfficeUrl, '_blank');
+  };
+
+  const handleRefreshFiles = async () => {
+    if (!user) return;
+    
+    setRefreshing(true);
+    console.log('Manual refresh triggered for user:', user.uid);
+    
+    try {
+      // Force a reload by temporarily clearing files and showing loading
+      setFiles([]);
+      setLoading(true);
+      
+      console.log('About to call fetchUserFiles...');
+      
+      // Use manual fetch as backup to ensure we get the latest data
+      const freshFiles = await fetchUserFiles(user.uid);
+      console.log('Manual fetch returned:', freshFiles.length, 'files');
+      console.log('Fresh files details:', freshFiles.map(f => ({ 
+        id: f.id, 
+        fileName: f.fileName, 
+        fileSize: f.fileSize, 
+        updatedAt: f.updatedAt,
+        hasContent: !!f.fileContent,
+        contentLength: f.fileContent?.length || 0
+      })));
+      
+      // Log individual file details for better visibility
+      freshFiles.forEach((file, index) => {
+        console.log(`File ${index + 1}:`, {
+          id: file.id,
+          fileName: file.fileName,
+          fileSize: file.fileSize,
+          updatedAt: file.updatedAt,
+          hasContent: !!file.fileContent,
+          contentLength: file.fileContent?.length || 0
+        });
+      });
+      
+      setFiles(freshFiles);
+      setLoading(false);
+      
+      setSuccess('Files refreshed successfully!');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      console.error('Refresh error:', error);
+      setError('Failed to refresh files: ' + error.message);
+      setLoading(false);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleDownloadFile = (file) => {
@@ -363,9 +436,20 @@ const Dashboard = () => {
           {/* Bottom Row - Your Files */}
           <Grid size={12} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' }, mt: 3 }}>
             <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Your Files
-              </Typography>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">
+                  Your Files
+                </Typography>
+                <Button
+                  variant="outlined"
+                  startIcon={<RefreshIcon />}
+                  size="small"
+                  onClick={handleRefreshFiles}
+                  disabled={refreshing}
+                >
+                  {refreshing ? 'Refreshing...' : 'Refresh'}
+                </Button>
+              </Box>
               {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
                   <CircularProgress />
