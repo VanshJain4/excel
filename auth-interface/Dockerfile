@@ -22,5 +22,5 @@ RUN npm install -g serve
 # Expose port
 EXPOSE $PORT
 
-# Start the app
-CMD ["sh", "-c", "serve -s build -l $PORT"]
+# Start the app with explicit port
+CMD ["sh", "-c", "echo 'Starting server on port $PORT' && serve -s build -l $PORT"]
