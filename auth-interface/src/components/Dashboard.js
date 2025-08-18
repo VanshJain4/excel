@@ -17,7 +17,6 @@ import {
   Paper,
   List,
   ListItem,
-  ListItemText,
   ListItemIcon,
   Chip,
   Dialog,
