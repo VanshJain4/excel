@@ -15,7 +15,7 @@ import {
   Avatar
 } from '@mui/material';
 import { Google as GoogleIcon, PersonAdd as PersonAddIcon } from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 
 const Register = () => {
   const [name, setName] = useState('');
@@ -26,7 +26,7 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   
-  const { register, loginWithGoogle } = useAuth();
+  const { createUserWithEmailAndPassword, signInWithGoogle } = useFirebaseAuth();
   const navigate = useNavigate();
 
   const handleEmailRegister = async (e) => {
@@ -51,14 +51,10 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const result = await register(name, email, password);
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setError(result.error || 'Failed to register');
-      }
+      await createUserWithEmailAndPassword(email, password);
+      navigate('/dashboard');
     } catch (error) {
-      setError('An unexpected error occurred');
+      setError(error.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
@@ -69,14 +65,10 @@ const Register = () => {
     setGoogleLoading(true);
 
     try {
-      const result = await loginWithGoogle();
-      if (result.success) {
-        navigate('/dashboard');
-      } else {
-        setError(result.error || 'Failed to login with Google');
-      }
+      await signInWithGoogle();
+      navigate('/dashboard');
     } catch (error) {
-      setError('An unexpected error occurred');
+      setError(error.message || 'An unexpected error occurred');
     } finally {
       setGoogleLoading(false);
     }

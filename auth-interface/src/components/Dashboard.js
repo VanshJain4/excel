@@ -180,7 +180,8 @@ const Dashboard = () => {
 
   const openFileInLibreOffice = (file) => {
     // Open file in LibreOffice with the file ID and user info
-    const libreOfficeUrl = `http://localhost:3002/collabora-with-chat.html?fileId=${file.id}&userId=${user.uid}&userEmail=${encodeURIComponent(user.email || '')}`;
+    const wopiServerUrl = process.env.REACT_APP_WOPI_SERVER_URL || 'http://localhost:3002';
+    const libreOfficeUrl = `${wopiServerUrl}/collabora-with-chat.html?fileId=${file.id}&userId=${user.uid}&userEmail=${encodeURIComponent(user.email || '')}`;
     window.open(libreOfficeUrl, '_blank');
   };
 
@@ -423,7 +424,10 @@ const Dashboard = () => {
                     size="large"
                     fullWidth
                     sx={{ py: 2 }}
-                    onClick={() => window.open('http://localhost:3002', '_blank')}
+                    onClick={() => {
+                      const wopiServerUrl = process.env.REACT_APP_WOPI_SERVER_URL || 'http://localhost:3002';
+                      window.open(wopiServerUrl, '_blank');
+                    }}
                   >
                     Open LibreOffice Calc
                   </Button>
