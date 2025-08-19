@@ -50,7 +50,10 @@ startWopiServer();
 
 // Proxy WOPI requests to WOPI server
 app.use('/wopi', async (req, res) => {
+  console.log('WOPI request:', req.method, req.originalUrl);
+  
   if (!wopiServer) {
+    console.error('WOPI server not available');
     return res.status(503).json({ 
       error: 'WOPI service not available',
       message: 'File editing service not running'
@@ -60,6 +63,7 @@ app.use('/wopi', async (req, res) => {
   try {
     const axios = require('axios');
     const url = `http://localhost:3002${req.originalUrl}`;
+    console.log('Proxying to:', url);
     
     const response = await axios({
       method: req.method,
@@ -70,6 +74,8 @@ app.use('/wopi', async (req, res) => {
       timeout: 30000
     });
     
+    console.log('WOPI response status:', response.status);
+    
     // Forward response
     res.status(response.status);
     if (response.headers['content-type']) {
@@ -78,9 +84,11 @@ app.use('/wopi', async (req, res) => {
     res.send(response.data);
   } catch (error) {
     console.error('WOPI proxy error:', error.message);
+    console.error('WOPI proxy error details:', error.response?.data);
     res.status(error.response?.status || 500).json({
       error: 'WOPI service error',
-      message: error.message
+      message: error.message,
+      details: error.response?.data
     });
   }
 });
@@ -99,9 +107,32 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint to check if React build exists
+app.get('/debug', (req, res) => {
+  const fs = require('fs');
+  const buildPath = path.resolve('auth-interface/build');
+  const indexPath = path.resolve('auth-interface/build/index.html');
+  
+  res.json({
+    buildPath,
+    indexPath,
+    buildExists: fs.existsSync(buildPath),
+    indexExists: fs.existsSync(indexPath),
+    buildContents: fs.existsSync(buildPath) ? fs.readdirSync(buildPath) : 'N/A'
+  });
+});
+
 // Serve React app for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.resolve('auth-interface/build/index.html'));
+  const indexPath = path.resolve('auth-interface/build/index.html');
+  console.log('Serving React app from:', indexPath);
+  
+  if (!require('fs').existsSync(indexPath)) {
+    console.error('React build not found at:', indexPath);
+    return res.status(404).json({ error: 'React build not found' });
+  }
+  
+  res.sendFile(indexPath);
 });
 
 app.listen(PORT, '0.0.0.0', () => {
