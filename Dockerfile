@@ -26,10 +26,8 @@ RUN cd auth-interface && npm run build
 # Install serve globally
 RUN npm install -g serve
 
-# Expose ports
+# Expose port
 EXPOSE $PORT
-EXPOSE 3002
-EXPOSE 5001
 
-# Start the complete system
-CMD ["./start-complete-system.sh"]
+# Start the Railway app
+CMD ["node", "railway-start.js"]
