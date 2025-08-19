@@ -377,7 +377,7 @@ const Dashboard = () => {
           {/* Top Row - Welcome and Quick Actions */}
           <Grid container spacing={3} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' } }}>
             {/* Welcome Card */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid xs={12} md={6}>
               <Card sx={{ height: '100%', minHeight: 200 }}>
                 <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -405,7 +405,7 @@ const Dashboard = () => {
             </Grid>
 
             {/* Quick Actions */}
-            <Grid size={{ xs: 12, md: 6 }}>
+            <Grid xs={12} md={6}>
               <Paper sx={{ p: 3, height: '100%', minHeight: 200 }}>
                 <Typography variant="h6" gutterBottom>
                   Quick Actions
@@ -434,7 +434,7 @@ const Dashboard = () => {
           </Grid>
 
           {/* Bottom Row - Your Files */}
-          <Grid size={12} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' }, mt: 3 }}>
+          <Grid xs={12} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' }, mt: 3 }}>
             <Paper sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
