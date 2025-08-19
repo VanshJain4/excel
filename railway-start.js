@@ -20,7 +20,13 @@ app.use(express.json());
 
 // Simple test endpoint
 app.get('/test', (req, res) => {
-  res.json({ message: 'Express server is working!', timestamp: new Date().toISOString() });
+  res.json({ 
+    message: 'Express server is working!', 
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    envPort: process.env.PORT,
+    host: '0.0.0.0'
+  });
 });
 
 // Start WOPI server in background
@@ -56,10 +62,12 @@ async function startWopiServer() {
 }
 
 // Start WOPI server (non-blocking)
-startWopiServer().catch(error => {
-  console.error('Failed to start WOPI server:', error);
-  // Don't crash the app if WOPI server fails
-});
+setTimeout(() => {
+  startWopiServer().catch(error => {
+    console.error('Failed to start WOPI server:', error);
+    // Don't crash the app if WOPI server fails
+  });
+}, 1000); // Start WOPI server after main server is running
 
 // Proxy WOPI requests to WOPI server
 app.use('/wopi', async (req, res) => {
@@ -169,6 +177,8 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('✅ Server running on port', PORT);
   console.log('🔗 Health check: http://localhost:' + PORT + '/health');
   console.log('📁 WOPI server: Starting...');
+  console.log('🌐 App URL: http://0.0.0.0:' + PORT);
+  console.log('🔧 Environment PORT:', process.env.PORT);
 });
 
 // Graceful shutdown
