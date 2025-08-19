@@ -109,15 +109,32 @@ app.use('/wopi', async (req, res) => {
 // Serve static files from React build
 app.use(express.static(path.resolve('auth-interface/build')));
 
-// Health check
+// Health check for Railway
 app.get('/health', (req, res) => {
-  res.json({ 
+  res.status(200).json({ 
     status: 'OK', 
     port: PORT, 
     timestamp: new Date().toISOString(),
     message: 'Railway app is running',
     wopiServer: wopiServer && !wopiServer.killed ? 'running' : 'starting'
   });
+});
+
+// Root health check (Railway default)
+app.get('/', (req, res) => {
+  // Check if React build exists
+  const fs = require('fs');
+  const indexPath = path.resolve('auth-interface/build/index.html');
+  
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(200).json({ 
+      status: 'OK', 
+      message: 'Express server is running, React build not found',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Debug endpoint to check if React build exists
