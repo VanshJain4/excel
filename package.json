@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "description": "Complete SKOPEO.AI system with LibreOffice and AI",
   "scripts": {
+    "start": "node railway-start.js",
+    "build": "cd auth-interface && npm install && npm run build",
     "start:complete": "./start-complete-system.sh",
     "stop:complete": "./stop-complete-system.sh",
     "install:all": "npm install && cd auth-interface && npm install && cd ../auth-backend && npm install",
