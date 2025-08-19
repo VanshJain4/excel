@@ -5,7 +5,9 @@
     "dockerfilePath": "Dockerfile"
   },
   "deploy": {
-    "startCommand": "./start-complete-system.sh",
+    "startCommand": "node railway-server.js",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 100,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 10
   }

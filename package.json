@@ -2,19 +2,34 @@
   "name": "skopeo-ai-complete",
   "version": "1.0.0",
   "description": "Complete SKOPEO.AI system with LibreOffice and AI",
+  "main": "railway-server.js",
   "scripts": {
+    "start": "node railway-server.js",
+    "build": "cd auth-interface && npm run build",
+    "install:all": "npm install && cd auth-interface && npm install && cd ../auth-backend && npm install && cd ../gpt && npm install",
     "start:complete": "./start-complete-system.sh",
     "stop:complete": "./stop-complete-system.sh",
-    "install:all": "npm install && cd auth-interface && npm install && cd ../auth-backend && npm install",
-    "build:frontend": "cd auth-interface && npm run build",
     "start:frontend": "cd auth-interface && npm start",
     "start:backend": "cd auth-backend && npm start",
     "start:wopi": "cd gpt && node server.js"
   },
   "dependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "path": "^0.12.7"
   },
   "engines": {
-    "node": ">=18.0.0"
-  }
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": [
+    "libreoffice",
+    "collabora",
+    "spreadsheet",
+    "wopi",
+    "railway"
+  ],
+  "author": "SKOPEO.AI Team",
+  "license": "MIT"
 }
