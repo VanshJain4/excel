@@ -43,6 +43,7 @@ import {
 } from '@mui/icons-material';
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
 import { uploadFile, getUserFiles, deleteFile, fetchUserFiles } from '../services/firebaseFileService';
+import CreateExcelButton from './CreateExcelButton';
 
 const Dashboard = () => {
   const { user, logout } = useFirebaseAuth();
@@ -57,6 +58,8 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [createFileDialogOpen, setCreateFileDialogOpen] = useState(false);
+  const [creatingFile, setCreatingFile] = useState(false);
 
   // Set up real-time listener for user files
   useEffect(() => {
@@ -418,19 +421,13 @@ const Dashboard = () => {
                   >
                     Upload New File
                   </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<TableChart />}
-                    size="large"
-                    fullWidth
-                    sx={{ py: 2 }}
-                    onClick={() => {
-                      const wopiServerUrl = process.env.REACT_APP_WOPI_SERVER_URL || 'http://localhost:3002';
-                      window.open(wopiServerUrl, '_blank');
+                  <CreateExcelButton 
+                    user={user} 
+                    onFileCreated={(result) => {
+                      setSuccess(`File "${result.fileName}" created successfully!`);
+                      setTimeout(() => setSuccess(''), 3000);
                     }}
-                  >
-                    Open LibreOffice Calc
-                  </Button>
+                  />
                 </Box>
               </Paper>
             </Grid>

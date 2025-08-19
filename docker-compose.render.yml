@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Main application service
+  app:
+    build: .
+    ports:
+      - "${PORT:-3001}:3001"
+      - "3002:3002"
+      - "5001:5001"
+    environment:
+      - PORT=${PORT:-3001}
+    depends_on:
+      - collabora
+    networks:
+      - skopeo-network
+
+  # LibreOffice Collabora service
+  collabora:
+    image: collabora/code:latest
+    container_name: collabora
+    ports:
+      - "9980:9980"
+    environment:
+      - domain=localhost
+      - username=admin
+      - password=admin
+      - dictionaries=en_US
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=true
+    cap_add:
+      - MKNOD
+    restart: always
+    networks:
+      - skopeo-network
+
+networks:
+  skopeo-network:
+    driver: bridge

@@ -243,8 +243,8 @@ app.get("/wopi/files/:id/contents", async (req, res) => {
             return;
         }
         
-        if (!fileData.fileContent) {
-            console.log(`No file content for: ${fileId}`);
+        if (!fileData.fileContent || fileData.isEmpty) {
+            console.log(`No file content or empty file for: ${fileId}`);
             // Fallback to sample file
             const sampleExcelPath = path.join(__dirname, 'sample-spreadsheet.xlsx');
             if (fs.existsSync(sampleExcelPath)) {
