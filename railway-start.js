@@ -18,6 +18,11 @@ app.use(cors({
 
 app.use(express.json());
 
+// Simple test endpoint
+app.get('/test', (req, res) => {
+  res.json({ message: 'Express server is working!', timestamp: new Date().toISOString() });
+});
+
 // Start WOPI server in background
 let wopiServer = null;
 
@@ -37,22 +42,30 @@ async function startWopiServer() {
       console.error('WOPI server error:', err);
     });
 
+    wopiServer.on('exit', (code) => {
+      console.error('WOPI server exited with code:', code);
+    });
+
     // Wait for WOPI server to start
     await new Promise(resolve => setTimeout(resolve, 2000));
     console.log('✅ WOPI server started successfully');
   } catch (error) {
     console.error('Error starting WOPI server:', error);
+    throw error;
   }
 }
 
-// Start WOPI server
-startWopiServer();
+// Start WOPI server (non-blocking)
+startWopiServer().catch(error => {
+  console.error('Failed to start WOPI server:', error);
+  // Don't crash the app if WOPI server fails
+});
 
 // Proxy WOPI requests to WOPI server
 app.use('/wopi', async (req, res) => {
   console.log('WOPI request:', req.method, req.originalUrl);
   
-  if (!wopiServer) {
+  if (!wopiServer || wopiServer.killed) {
     console.error('WOPI server not available');
     return res.status(503).json({ 
       error: 'WOPI service not available',
