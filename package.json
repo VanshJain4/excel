@@ -12,7 +12,10 @@
     "start:wopi": "cd gpt && node server.js"
   },
   "dependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "axios": "^1.6.0"
   },
   "engines": {
     "node": ">=18.0.0"
