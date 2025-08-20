@@ -139,7 +139,7 @@ app.get('*', (req, res) => {
   res.sendFile(indexPath);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('✅ Server running on port', PORT);
   console.log('🔗 Health check: http://localhost:' + PORT + '/health');
   console.log('📁 WOPI server: Starting...');
@@ -150,6 +150,21 @@ app.listen(PORT, '0.0.0.0', () => {
   setTimeout(() => {
     console.log('🚀 App is fully ready for requests!');
   }, 2000);
+});
+
+// Keep server reference to prevent garbage collection
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
+// Prevent process from exiting
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+  // Don't exit, just log the error
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  // Don't exit, just log the error
 });
 
 // Graceful shutdown
@@ -168,3 +183,8 @@ process.on('SIGINT', () => {
   }
   process.exit(0);
 });
+
+// Keep the process alive
+setInterval(() => {
+  console.log('🔄 Keep-alive ping:', new Date().toISOString());
+}, 30000); // Log every 30 seconds to show process is alive
