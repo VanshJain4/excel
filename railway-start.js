@@ -61,57 +61,24 @@ async function startWopiServer() {
   }
 }
 
-// Start WOPI server (non-blocking)
-setTimeout(() => {
-  startWopiServer().catch(error => {
-    console.error('Failed to start WOPI server:', error);
-    // Don't crash the app if WOPI server fails
-  });
-}, 1000); // Start WOPI server after main server is running
+// Start WOPI server (non-blocking) - DISABLED FOR TESTING
+console.log('⚠️ WOPI server startup disabled for testing');
+// setTimeout(() => {
+//   startWopiServer().catch(error => {
+//     console.error('Failed to start WOPI server:', error);
+//     // Don't crash the app if WOPI server fails
+//   });
+// }, 1000); // Start WOPI server after main server is running
 
-// Proxy WOPI requests to WOPI server
+// Proxy WOPI requests to WOPI server - DISABLED FOR TESTING
 app.use('/wopi', async (req, res) => {
   console.log('WOPI request:', req.method, req.originalUrl);
   
-  if (!wopiServer || wopiServer.killed) {
-    console.error('WOPI server not available');
-    return res.status(503).json({ 
-      error: 'WOPI service not available',
-      message: 'File editing service not running'
-    });
-  }
-  
-  try {
-    const axios = require('axios');
-    const url = `http://localhost:3002${req.originalUrl}`;
-    console.log('Proxying to:', url);
-    
-    const response = await axios({
-      method: req.method,
-      url: url,
-      data: req.body,
-      headers: req.headers,
-      responseType: req.originalUrl.includes('/contents') ? 'arraybuffer' : 'json',
-      timeout: 30000
-    });
-    
-    console.log('WOPI response status:', response.status);
-    
-    // Forward response
-    res.status(response.status);
-    if (response.headers['content-type']) {
-      res.setHeader('Content-Type', response.headers['content-type']);
-    }
-    res.send(response.data);
-  } catch (error) {
-    console.error('WOPI proxy error:', error.message);
-    console.error('WOPI proxy error details:', error.response?.data);
-    res.status(error.response?.status || 500).json({
-      error: 'WOPI service error',
-      message: error.message,
-      details: error.response?.data
-    });
-  }
+    // WOPI server disabled for testing
+  return res.status(503).json({ 
+    error: 'WOPI service not available',
+    message: 'WOPI server disabled for testing'
+  });
 });
 
 // Serve static files from React build
