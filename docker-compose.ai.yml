@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # LibreOffice Web App (Your current repo)
+  libreoffice-app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - AI_SERVICES_URL=http://ai-services:3003
+      - NLP_SERVICES_URL=http://nlp-services:3004
+      - AI_SERVICES_API_KEY=${AI_SERVICES_API_KEY}
+      - NLP_SERVICES_API_KEY=${NLP_SERVICES_API_KEY}
+    depends_on:
+      - collabora
+      - ai-services
+      - nlp-services
+    networks:
+      - ai-network
+
+  # Collabora Online (LibreOffice in browser)
+  collabora:
+    image: collabora/code:latest
+    container_name: collabora
+    ports:
+      - "9980:9980"
+    environment:
+      - domain=localhost
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=false --o:net.frame_ancestors=localhost:3000 --o:net.post_allow.host=host.docker.internal:3000 --o:wopi.host.allowlist=host.docker.internal:3000
+    cap_add:
+      - MKNOD
+    networks:
+      - ai-network
+
+  # AI Services (Repo #2) - Copilot features
+  ai-services:
+    image: your-ai-services:latest  # Replace with your AI services image
+    container_name: ai-services
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - MODEL_ENDPOINT=${MODEL_ENDPOINT}
+    volumes:
+      - ai_models:/app/models
+    networks:
+      - ai-network
+
+  # NLP Services (Repo #3) - Fine-tuned LLMs
+  nlp-services:
+    image: your-nlp-services:latest  # Replace with your NLP services image
+    container_name: nlp-services
+    ports:
+      - "3004:3004"
+    environment:
+      - PORT=3004
+      - FINE_TUNED_MODEL_PATH=/app/models/fine-tuned
+      - CONTEXT_WINDOW_SIZE=8192
+      - BATCH_SIZE=32
+    volumes:
+      - nlp_models:/app/models
+    networks:
+      - ai-network
+
+  # Redis for caching AI responses
+  redis:
+    image: redis:7-alpine
+    container_name: ai-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - ai-network
+
+  # MongoDB for user data (if using auth backend)
+  mongodb:
+    image: mongo:6
+    container_name: ai-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - ai-network
+
+volumes:
+  ai_models:
+  nlp_models:
+  mongodb_data:
+
+networks:
+  ai-network:
+    driver: bridge 

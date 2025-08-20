@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const session = require('express-session');
@@ -45,7 +46,12 @@ app.use(passport.session());
 require('./auth-backend/config/passport');
 
 // Serve static files from React build
-app.use(express.static(path.join(__dirname, 'auth-interface/build')));
+const buildPath = path.join(__dirname, 'auth-interface/build');
+if (fs.existsSync(buildPath)) {
+  app.use(express.static(buildPath));
+} else {
+  console.log('⚠️  React build directory not found. Make sure to run "npm run build" before starting the server.');
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -135,6 +141,15 @@ wopiRouter.get('/files/:id', async (req, res) => {
   }
 });
 
+// Add a note about Collabora availability
+wopiRouter.get('/status', (req, res) => {
+  res.json({
+    status: 'WOPI server running',
+    note: 'Collabora service needs to be deployed separately or use external Collabora instance',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // WOPI endpoint: get file contents
 wopiRouter.get('/files/:id/contents', (req, res) => {
   // Return empty Excel file or sample file
@@ -158,7 +173,20 @@ app.use('/wopi', wopiRouter);
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'auth-interface/build', 'index.html'));
+  const indexPath = path.join(__dirname, 'auth-interface/build', 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.json({
+      message: 'SKOPEO.AI API is running',
+      note: 'React frontend not built. Run "npm run build" to build the frontend.',
+      endpoints: {
+        health: '/health',
+        api: '/api',
+        wopi: '/wopi'
+      }
+    });
+  }
 });
 
 // Connect to MongoDB first, then start server

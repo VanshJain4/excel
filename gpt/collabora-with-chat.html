@@ -628,7 +628,7 @@
         }
         
         // Function to send a message
-        function sendMessage() {
+        async function sendMessage() {
             const message = chatInput.value.trim();
             if (message === '') return;
             
@@ -638,16 +638,145 @@
             // Clear input
             chatInput.value = '';
             
-            // Simulate AI thinking (you can remove this later)
+            // Show AI thinking state
             sendButton.disabled = true;
             sendButton.textContent = 'Thinking...';
             
-            // Echo the message back (simple AI response)
-            setTimeout(() => {
-                addMessage(`You said: "${message}"`);
+            try {
+                // Get current spreadsheet data from WOPI server
+                const fileId = getFileIdFromUrl();
+                const spreadsheetData = await getCurrentSpreadsheetData(fileId);
+                
+                // Send to AI services
+                const response = await fetch('/ai/chat', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${window.currentUser?.uid || 'anonymous'}`
+                    },
+                    body: JSON.stringify({
+                        message,
+                        spreadsheetData,
+                        userId: window.currentUser?.uid || 'anonymous',
+                        fileId: fileId
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('AI service error');
+                }
+                
+                const aiResponse = await response.json();
+                
+                // Add AI response
+                addMessage(aiResponse.response, false);
+                
+                // Handle AI actions if any
+                if (aiResponse.actions && aiResponse.actions.length > 0) {
+                    handleAIActions(aiResponse.actions);
+                }
+                
+                // Show suggestions if any
+                if (aiResponse.suggestions && aiResponse.suggestions.length > 0) {
+                    showSuggestions(aiResponse.suggestions);
+                }
+                
+            } catch (error) {
+                console.error('AI Chat error:', error);
+                addMessage('I\'m having trouble processing your request. Please try again.', false);
+            } finally {
                 sendButton.disabled = false;
                 sendButton.textContent = 'Send Message';
-            }, 1000);
+            }
+        }
+        
+        // Function to get current spreadsheet data
+        async function getCurrentSpreadsheetData(fileId) {
+            try {
+                // Get file info from WOPI server
+                const response = await fetch(`/wopi/files/${fileId}`);
+                const fileInfo = await response.json();
+                
+                // Get file content if available
+                const contentResponse = await fetch(`/wopi/files/${fileId}/contents`);
+                const fileContent = await contentResponse.blob();
+                
+                return {
+                    fileInfo,
+                    fileContent: fileContent,
+                    fileSize: fileContent.size,
+                    lastModified: new Date().toISOString()
+                };
+            } catch (error) {
+                console.error('Error getting spreadsheet data:', error);
+                return null;
+            }
+        }
+        
+        // Function to handle AI actions
+        function handleAIActions(actions) {
+            actions.forEach(action => {
+                switch (action.type) {
+                    case 'apply_formula':
+                        applyFormulaToSheet(action.formula, action.cell);
+                        break;
+                    case 'highlight_cells':
+                        highlightCells(action.cells, action.color);
+                        break;
+                    case 'create_chart':
+                        createChart(action.chartData);
+                        break;
+                    case 'save_file':
+                        saveFile(); // Use existing save function
+                        break;
+                    default:
+                        console.log('Unknown action type:', action.type);
+                }
+            });
+        }
+        
+        // Function to show AI suggestions
+        function showSuggestions(suggestions) {
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'ai-suggestions';
+            suggestionsDiv.innerHTML = `
+                <div style="background: #e8f5e8; border-left: 4px solid #0f6803; padding: 10px; margin: 10px 0; border-radius: 4px;">
+                    <strong>💡 Suggestions:</strong>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+                        ${suggestions.map(s => `<li>${s}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
+            chatMessages.appendChild(suggestionsDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        // Helper functions for AI actions
+        function applyFormulaToSheet(formula, cell) {
+            // Send message to Collabora iframe to apply formula
+            const iframe = document.getElementById('collabora-iframe');
+            iframe.contentWindow.postMessage({
+                type: 'apply_formula',
+                formula: formula,
+                cell: cell
+            }, '*');
+        }
+        
+        function highlightCells(cells, color) {
+            const iframe = document.getElementById('collabora-iframe');
+            iframe.contentWindow.postMessage({
+                type: 'highlight_cells',
+                cells: cells,
+                color: color
+            }, '*');
+        }
+        
+        function createChart(chartData) {
+            const iframe = document.getElementById('collabora-iframe');
+            iframe.contentWindow.postMessage({
+                type: 'create_chart',
+                chartData: chartData
+            }, '*');
         }
         
         // Allow Enter key to send message

@@ -4,14 +4,15 @@
   "description": "Complete SKOPEO.AI system with LibreOffice and AI",
   "main": "railway-server.js",
   "scripts": {
-    "start": "node railway-server.js",
-    "build": "cd auth-interface && npm run build",
+    "start": "npm run build && node railway-server.js",
+    "build": "cd auth-interface && npm install && npm run build",
     "install:all": "npm install && cd auth-interface && npm install && cd ../auth-backend && npm install && cd ../gpt && npm install",
     "start:complete": "./start-complete-system.sh",
     "stop:complete": "./stop-complete-system.sh",
     "start:frontend": "cd auth-interface && npm start",
     "start:backend": "cd auth-backend && npm start",
-    "start:wopi": "cd gpt && node server.js"
+    "start:wopi": "cd gpt && node server.js",
+    "render:start": "npm run build && node railway-server.js"
   },
   "dependencies": {
     "concurrently": "^8.2.2",

@@ -10,6 +10,10 @@ app.use(express.json());
 app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.static(__dirname));
 
+// AI Services Configuration
+const AI_SERVICES_URL = process.env.AI_SERVICES_URL || 'http://localhost:3003';
+const NLP_SERVICES_URL = process.env.NLP_SERVICES_URL || 'http://localhost:3004';
+
 const PORT = 3002;
 
 // Firebase configuration
@@ -355,6 +359,127 @@ app.get("/debug/files", async (req, res) => {
     } catch (error) {
         console.error('Error listing files:', error);
         res.status(500).json({ error: "Failed to list files" });
+    }
+});
+
+// AI Integration Endpoints
+// Route to AI Services (Repo #2) - Copilot features
+app.post("/ai/copilot/analyze", async (req, res) => {
+    try {
+        const { spreadsheetData, userQuery, context } = req.body;
+        
+        console.log('AI Copilot request:', { userQuery, context });
+        
+        const response = await axios.post(`${AI_SERVICES_URL}/api/analyze`, {
+            spreadsheetData,
+            userQuery,
+            context,
+            timestamp: new Date().toISOString()
+        }, {
+            timeout: 30000, // 30 second timeout
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.AI_SERVICES_API_KEY || 'default-key'}`
+            }
+        });
+        
+        res.json(response.data);
+    } catch (error) {
+        console.error('AI Copilot service error:', error.message);
+        res.status(500).json({ 
+            error: 'AI service unavailable',
+            fallback: 'Please try again later or contact support.'
+        });
+    }
+});
+
+// Route to NLP Services (Repo #3) - Fine-tuned LLMs
+app.post("/ai/nlp/process", async (req, res) => {
+    try {
+        const { message, spreadsheetContext, userContext } = req.body;
+        
+        console.log('NLP processing request:', { message, userContext });
+        
+        const response = await axios.post(`${NLP_SERVICES_URL}/api/process`, {
+            message,
+            spreadsheetContext,
+            userContext,
+            timestamp: new Date().toISOString()
+        }, {
+            timeout: 30000,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.NLP_SERVICES_API_KEY || 'default-key'}`
+            }
+        });
+        
+        res.json(response.data);
+    } catch (error) {
+        console.error('NLP service error:', error.message);
+        res.status(500).json({ 
+            error: 'NLP service unavailable',
+            fallback: 'Please try again later or contact support.'
+        });
+    }
+});
+
+// Combined AI Chat endpoint that uses both services
+app.post("/ai/chat", async (req, res) => {
+    try {
+        const { message, spreadsheetData, userId, fileId } = req.body;
+        
+        console.log('AI Chat request:', { message, userId, fileId });
+        
+        // First, process with NLP for context understanding
+        const nlpResponse = await axios.post(`${NLP_SERVICES_URL}/api/process`, {
+            message,
+            spreadsheetContext: spreadsheetData,
+            userContext: { userId, fileId }
+        }, {
+            timeout: 15000,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.NLP_SERVICES_API_KEY || 'default-key'}`
+            }
+        });
+        
+        // Then, route to appropriate AI service based on NLP analysis
+        const processedQuery = nlpResponse.data.processedQuery;
+        const intent = nlpResponse.data.intent;
+        
+        let aiResponse;
+        if (intent === 'analysis' || intent === 'formula' || intent === 'automation') {
+            // Route to Copilot services
+            const copilotResponse = await axios.post(`${AI_SERVICES_URL}/api/analyze`, {
+                spreadsheetData,
+                userQuery: processedQuery,
+                context: nlpResponse.data.context
+            }, {
+                timeout: 30000,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.AI_SERVICES_API_KEY || 'default-key'}`
+                }
+            });
+            aiResponse = copilotResponse.data;
+        } else {
+            // Use NLP response directly for general chat
+            aiResponse = nlpResponse.data;
+        }
+        
+        res.json({
+            response: aiResponse.response || aiResponse.message,
+            actions: aiResponse.actions || [],
+            suggestions: aiResponse.suggestions || [],
+            confidence: aiResponse.confidence || 0.8
+        });
+        
+    } catch (error) {
+        console.error('AI Chat error:', error.message);
+        res.status(500).json({ 
+            error: 'AI services unavailable',
+            fallback: 'I\'m having trouble processing your request. Please try again.'
+        });
     }
 });
 
