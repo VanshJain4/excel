@@ -119,30 +119,29 @@ app.use(express.static(path.resolve('auth-interface/build')));
 
 // Health check for Railway
 app.get('/health', (req, res) => {
+  console.log('Health check requested');
   res.status(200).json({ 
     status: 'OK', 
     port: PORT, 
     timestamp: new Date().toISOString(),
     message: 'Railway app is running',
-    wopiServer: wopiServer && !wopiServer.killed ? 'running' : 'starting'
+    wopiServer: wopiServer && !wopiServer.killed ? 'running' : 'starting',
+    uptime: process.uptime()
   });
 });
 
-// Root health check (Railway default)
+// Root health check (Railway default) - Respond immediately
 app.get('/', (req, res) => {
-  // Check if React build exists
-  const fs = require('fs');
-  const indexPath = path.resolve('auth-interface/build/index.html');
+  console.log('Root request received');
   
-  if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    res.status(200).json({ 
-      status: 'OK', 
-      message: 'Express server is running, React build not found',
-      timestamp: new Date().toISOString()
-    });
-  }
+  // Always respond immediately, don't check files
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Express server is running',
+    timestamp: new Date().toISOString(),
+    port: PORT,
+    uptime: process.uptime()
+  });
 });
 
 // Debug endpoint to check if React build exists
@@ -179,6 +178,11 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('📁 WOPI server: Starting...');
   console.log('🌐 App URL: http://0.0.0.0:' + PORT);
   console.log('🔧 Environment PORT:', process.env.PORT);
+  
+  // Add a small delay to ensure app is fully ready
+  setTimeout(() => {
+    console.log('🚀 App is fully ready for requests!');
+  }, 2000);
 });
 
 // Graceful shutdown
