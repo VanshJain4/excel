@@ -2,32 +2,45 @@
 FROM node:18-alpine
 
 # Install system dependencies
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash curl
 
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files first for better caching
 COPY package*.json ./
 COPY auth-interface/package*.json ./auth-interface/
 COPY auth-backend/package*.json ./auth-backend/
+COPY gpt/package*.json ./gpt/
 
-# Install dependencies
+# Install root dependencies
 RUN npm install
-RUN cd auth-interface && npm install
-RUN cd auth-backend && npm install
 
-# Copy source code
+# Install auth-interface dependencies and build
+WORKDIR /app/auth-interface
+RUN npm install
+COPY auth-interface/ .
+RUN npm run build
+
+# Install auth-backend dependencies
+WORKDIR /app/auth-backend
+RUN npm install
+COPY auth-backend/ .
+
+# Install gpt (WOPI server) dependencies
+WORKDIR /app/gpt
+RUN npm install
+COPY gpt/ .
+
+# Return to root and copy remaining files
+WORKDIR /app
 COPY . .
 
-# Build frontend
-RUN cd auth-interface && npm run build
-
-# Install serve globally
-RUN npm install -g serve
+# Make scripts executable
+RUN chmod +x *.sh
 
 # Expose port
 EXPOSE $PORT
 
-# Start the Railway app
-CMD ["node", "railway-start.js"]
+# Start the Railway server
+CMD ["node", "railway-server.js"]
