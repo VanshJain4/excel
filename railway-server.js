@@ -3,15 +3,15 @@ const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const session = require('express-session');
-const passport = require('passport');
 const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
+console.log('🚀 Starting Railway server...');
+console.log('📍 Port:', PORT);
+
+// Basic middleware
 app.use(cors({
   origin: [
     'http://localhost:3001', 
@@ -29,49 +29,17 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-secret-key',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
-
-// Passport middleware
-app.use(passport.initialize());
-app.use(passport.session());
-
-// Import passport config (with error handling)
-try {
-  require('./auth-backend/config/passport');
-} catch (error) {
-  console.warn('⚠️  Passport config not found, continuing without auth...');
-}
-
-// Serve static files from React build
-const buildPath = path.join(__dirname, 'auth-interface/build');
-if (fs.existsSync(buildPath)) {
-  app.use(express.static(buildPath));
-} else {
-  console.log('⚠️  React build directory not found. Make sure to run "npm run build" before starting the server.');
-}
-
 // Serve static files from gpt directory
 app.use('/gpt', express.static(path.join(__dirname, 'gpt')));
 
-// Health check endpoint (simple and fast)
+// Health check endpoint (MUST be simple and fast)
 app.get('/health', (req, res) => {
+  console.log('🔧 Health check requested');
   res.status(200).json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
     port: PORT,
-    services: {
-      wopi: 'running',
-      frontend: 'running'
-    }
+    message: 'Server is healthy'
   });
 });
 
@@ -136,6 +104,7 @@ const wopiRouter = express.Router();
 wopiRouter.get('/files/:id', async (req, res) => {
   try {
     const fileId = req.params.id;
+    console.log('📁 WOPI file info requested for:', fileId);
     
     if (fileId === 'empty') {
       res.json({
@@ -202,6 +171,7 @@ wopiRouter.get('/files/:id', async (req, res) => {
 wopiRouter.get('/files/:id/contents', async (req, res) => {
   try {
     const fileId = req.params.id;
+    console.log('📄 WOPI file content requested for:', fileId);
     
     if (fileId === 'empty') {
       const emptyExcelPath = path.join(__dirname, 'gpt', 'sample-spreadsheet.xlsx');
@@ -288,126 +258,17 @@ wopiRouter.post('/files/:id/contents', async (req, res) => {
   }
 });
 
-// AI Integration Routes
-const AI_SERVICES_URL = process.env.AI_SERVICES_URL || 'http://localhost:4000';
-const NLP_SERVICES_URL = process.env.NLP_SERVICES_URL || 'http://localhost:5000';
-
-// AI Copilot endpoint
-app.post('/ai/copilot/analyze', async (req, res) => {
-  try {
-    const response = await axios.post(`${AI_SERVICES_URL}/copilot/analyze`, req.body, {
-      timeout: 30000,
-      headers: { 'Content-Type': 'application/json' }
-    });
-    res.json(response.data);
-  } catch (error) {
-    console.error('AI Copilot error:', error.message);
-    res.status(500).json({ 
-      error: 'AI service unavailable', 
-      message: 'AI Copilot service is not available' 
-    });
-  }
-});
-
-// NLP Processing endpoint
-app.post('/ai/nlp/process', async (req, res) => {
-  try {
-    const response = await axios.post(`${NLP_SERVICES_URL}/nlp/process`, req.body, {
-      timeout: 30000,
-      headers: { 'Content-Type': 'application/json' }
-    });
-    res.json(response.data);
-  } catch (error) {
-    console.error('NLP service error:', error.message);
-    res.status(500).json({ 
-      error: 'NLP service unavailable', 
-      message: 'NLP service is not available' 
-    });
-  }
-});
-
-// Combined AI Chat endpoint
-app.post('/ai/chat', async (req, res) => {
-  try {
-    const { message, spreadsheetData, context } = req.body;
-    
-    // First try NLP processing
-    let nlpResult = null;
-    try {
-      const nlpResponse = await axios.post(`${NLP_SERVICES_URL}/nlp/process`, {
-        text: message,
-        context: context
-      }, { timeout: 15000 });
-      nlpResult = nlpResponse.data;
-    } catch (nlpError) {
-      console.warn('NLP service unavailable:', nlpError.message);
-    }
-    
-    // Then try AI Copilot analysis
-    let aiResult = null;
-    try {
-      const aiResponse = await axios.post(`${AI_SERVICES_URL}/copilot/analyze`, {
-        query: message,
-        spreadsheetData: spreadsheetData,
-        nlpContext: nlpResult
-      }, { timeout: 15000 });
-      aiResult = aiResponse.data;
-    } catch (aiError) {
-      console.warn('AI Copilot service unavailable:', aiError.message);
-    }
-    
-    // Return combined response
-    res.json({
-      success: true,
-      response: aiResult?.response || nlpResult?.response || "AI services are currently unavailable. Please try again later.",
-      suggestions: aiResult?.suggestions || [],
-      actions: aiResult?.actions || [],
-      nlpAnalysis: nlpResult,
-      aiAnalysis: aiResult
-    });
-    
-  } catch (error) {
-    console.error('Combined AI chat error:', error.message);
-    res.status(500).json({ 
-      error: 'AI services unavailable', 
-      response: "I'm sorry, but the AI services are currently unavailable. Please try again later."
-    });
-  }
-});
-
-// Check Collabora health
-app.get('/wopi/collabora-health', async (req, res) => {
-  try {
-    const collaboraUrl = process.env.COLLABORA_URL;
-    if (!collaboraUrl) {
-      return res.status(503).json({ error: 'Collabora URL not configured' });
-    }
-    
-    const response = await axios.get(`${collaboraUrl}/hosting/discovery`, { timeout: 5000 });
-    res.json({ status: 'OK', collabora: 'connected', discovery: response.data });
-  } catch (error) {
-    res.status(503).json({ 
-      status: 'ERROR', 
-      collabora: 'disconnected', 
-      error: error.message 
-    });
-  }
-});
-
-// API routes (with error handling)
-try {
-  const authRoutes = require('./auth-backend/routes/auth');
-  const fileRoutes = require('./auth-backend/routes/files');
-  const userRoutes = require('./auth-backend/routes/users');
-
-  app.use('/api/auth', authRoutes);
-  app.use('/api/files', fileRoutes);
-  app.use('/api/users', userRoutes);
-} catch (error) {
-  console.warn('⚠️  Auth routes not found, continuing without auth API...');
-}
-
 app.use('/wopi', wopiRouter);
+
+// Simple status endpoint
+app.get('/api/status', (req, res) => {
+  res.json({ 
+    status: 'OK',
+    services: ['wopi', 'health'],
+    collaboraUrl: process.env.COLLABORA_URL || 'Not configured',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Serve React app for all other routes
 app.get('*', (req, res) => {
@@ -416,52 +277,44 @@ app.get('*', (req, res) => {
     res.sendFile(indexPath);
   } else {
     res.json({
-      message: 'SKOPEO.AI API is running',
-      note: 'React frontend not built. Run "npm run build" to build the frontend.',
+      message: 'SKOPEO.AI WOPI Server is running',
+      status: 'OK',
       endpoints: {
         health: '/health',
         wopi: '/wopi',
-        ai: '/ai'
-      }
+        status: '/api/status'
+      },
+      timestamp: new Date().toISOString()
     });
   }
 });
 
-// Start server immediately (don't wait for MongoDB)
-app.listen(PORT, () => {
-  console.log(`🚀 Railway server running on port ${PORT}`);
-  console.log(`📱 Frontend: http://localhost:${PORT}`);
-  console.log(`🔧 Health check: http://localhost:${PORT}/health`);
-  console.log(`📁 WOPI API: http://localhost:${PORT}/wopi`);
-  console.log(`🤖 AI API: http://localhost:${PORT}/ai`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+// Start server immediately
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Railway server successfully started!`);
+  console.log(`🌐 Server running on http://0.0.0.0:${PORT}`);
+  console.log(`🔧 Health check: http://0.0.0.0:${PORT}/health`);
+  console.log(`📁 WOPI API: http://0.0.0.0:${PORT}/wopi`);
+  console.log(`📊 Status: http://0.0.0.0:${PORT}/api/status`);
   console.log(`🤝 Collabora URL: ${process.env.COLLABORA_URL || 'Not configured'}`);
 });
 
-// Connect to MongoDB in background (optional)
-if (process.env.MONGODB_URI) {
-  mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
-  })
-  .catch(err => {
-    console.warn('⚠️  MongoDB connection failed (continuing without database):', err.message);
-  });
-}
+// Error handling
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+});
 
-// Handle graceful shutdown
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('🛑 Received SIGTERM, shutting down gracefully...');
-  if (mongoose.connection.readyState === 1) {
-    mongoose.connection.close();
-  }
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 Received SIGINT, shutting down gracefully...');
-  if (mongoose.connection.readyState === 1) {
-    mongoose.connection.close();
-  }
   process.exit(0);
 }); 
