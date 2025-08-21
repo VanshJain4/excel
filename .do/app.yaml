@@ -9,7 +9,7 @@ services:
   run_command: node digitalocean-server.js
   environment_slug: node-js
   instance_count: 1
-  instance_size_slug: basic-xxs
+  instance_size_slug: basic-xs
   http_port: 8080
   routes:
   - path: /
@@ -34,6 +34,8 @@ services:
   - key: JWT_SECRET
     value: ${JWT_SECRET}
     type: SECRET
+  - key: COLLABORA_URL
+    value: "https://collabora-demo.onlyoffice.com"
   - key: FIREBASE_API_KEY
     value: ${FIREBASE_API_KEY}
     type: SECRET
@@ -49,40 +51,6 @@ services:
     value: 1:295265049654:web:486856ccde50928efe8c97
   - key: FIREBASE_MEASUREMENT_ID
     value: G-S7Y1FDBM6L
-  - key: COLLABORA_URL
-    value: ${COLLABORA_URL}
-    type: SECRET
-
-- name: collabora-online
-  image:
-    registry_type: DOCKER_HUB
-    registry: collabora
-    repository: code
-    tag: latest
-  instance_count: 1
-  instance_size_slug: basic-xs
-  http_port: 9980
-  routes:
-  - path: /collabora
-  health_check:
-    http_path: /
-    initial_delay_seconds: 30
-    period_seconds: 30
-    timeout_seconds: 10
-    success_threshold: 1
-    failure_threshold: 5
-  envs:
-  - key: domain
-    value: ${APP_DOMAIN}
-  - key: username
-    value: admin
-  - key: password
-    value: ${COLLABORA_PASSWORD}
-    type: SECRET
-  - key: dictionaries
-    value: en_US
-  - key: extra_params
-    value: "--o:ssl.enable=false --o:ssl.termination=false --o:net.frame_ancestors=* --o:net.post_allow.host=* --o:wopi.host.allowlist=*"
 
 databases:
 - name: mongodb
