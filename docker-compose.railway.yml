@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # Main application with WOPI server
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-3000}:3000"
+    environment:
+      - PORT=${PORT:-3000}
+      - NODE_ENV=production
+      - MONGODB_URI=${MONGODB_URI}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+      - FIREBASE_API_KEY=${FIREBASE_API_KEY}
+      - FIREBASE_AUTH_DOMAIN=${FIREBASE_AUTH_DOMAIN}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_STORAGE_BUCKET=${FIREBASE_STORAGE_BUCKET}
+      - FIREBASE_MESSAGING_SENDER_ID=${FIREBASE_MESSAGING_SENDER_ID}
+      - FIREBASE_APP_ID=${FIREBASE_APP_ID}
+      - FIREBASE_MEASUREMENT_ID=${FIREBASE_MEASUREMENT_ID}
+      - COLLABORA_URL=http://collabora:9980
+      - AI_SERVICES_URL=${AI_SERVICES_URL}
+      - NLP_SERVICES_URL=${NLP_SERVICES_URL}
+    depends_on:
+      - collabora
+    networks:
+      - railway-network
+
+  # Collabora Online service
+  collabora:
+    image: collabora/code:latest
+    ports:
+      - "9980:9980"
+    environment:
+      - domain=app
+      - username=admin
+      - password=collabora_password
+      - dictionaries=en_US
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=false --o:net.frame_ancestors=app:3000 --o:net.post_allow.host=app:3000 --o:wopi.host.allowlist=app:3000
+    cap_add:
+      - MKNOD
+      - SYS_CHROOT
+      - FOWNER
+      - CHOWN
+    restart: unless-stopped
+    networks:
+      - railway-network
+
+networks:
+  railway-network:
+    driver: bridge 
