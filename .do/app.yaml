@@ -1,0 +1,92 @@
+name: skopeo-ai-complete
+services:
+- name: main-app
+  source_dir: /
+  github:
+    repo: your-username/excel
+    branch: digitalocean-deployment
+    deploy_on_push: true
+  run_command: node digitalocean-server.js
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xs
+  http_port: 8080
+  routes:
+  - path: /
+  health_check:
+    http_path: /health
+    initial_delay_seconds: 10
+    period_seconds: 10
+    timeout_seconds: 5
+    success_threshold: 1
+    failure_threshold: 3
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: "8080"
+  - key: MONGODB_URI
+    value: ${MONGODB_URI}
+    type: SECRET
+  - key: SESSION_SECRET
+    value: ${SESSION_SECRET}
+    type: SECRET
+  - key: JWT_SECRET
+    value: ${JWT_SECRET}
+    type: SECRET
+  - key: COLLABORA_URL
+    value: "https://${APP_DOMAIN}/collabora"
+  - key: FIREBASE_API_KEY
+    value: ${FIREBASE_API_KEY}
+    type: SECRET
+  - key: FIREBASE_AUTH_DOMAIN
+    value: skopeo-ai.firebaseapp.com
+  - key: FIREBASE_PROJECT_ID
+    value: skopeo-ai
+  - key: FIREBASE_STORAGE_BUCKET
+    value: skopeo-ai.firebasestorage.app
+  - key: FIREBASE_MESSAGING_SENDER_ID
+    value: "295265049654"
+  - key: FIREBASE_APP_ID
+    value: 1:295265049654:web:486856ccde50928efe8c97
+  - key: FIREBASE_MEASUREMENT_ID
+    value: G-S7Y1FDBM6L
+
+- name: collabora-service
+  image:
+    registry_type: DOCKER_HUB
+    registry: collabora
+    repository: code
+    tag: latest
+  instance_count: 1
+  instance_size_slug: basic-s
+  http_port: 9980
+  routes:
+  - path: /collabora
+  health_check:
+    http_path: /
+    initial_delay_seconds: 60
+    period_seconds: 30
+    timeout_seconds: 15
+    success_threshold: 1
+    failure_threshold: 5
+  envs:
+  - key: aliasgroup1
+    value: "https://${APP_DOMAIN}:443"
+  - key: username
+    value: admin
+  - key: password
+    value: ${COLLABORA_PASSWORD}
+    type: SECRET
+  - key: dictionaries
+    value: "en_US en_GB"
+  - key: extra_params
+    value: "--o:ssl.enable=false --o:ssl.termination=true --o:net.frame_ancestors=${APP_DOMAIN} --o:net.post_allow.host=${APP_DOMAIN}"
+  - key: server_name
+    value: "${APP_DOMAIN}"
+
+databases:
+- name: mongodb
+  engine: MONGODB
+  version: "6.0"
+  production: false

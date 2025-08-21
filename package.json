@@ -1,10 +1,10 @@
 {
-  "name": "skopeo-ai-complete",
+  "name": "skopeo-ai-digitalocean",
   "version": "1.0.0",
-  "description": "Complete SKOPEO.AI system with LibreOffice and AI",
-  "main": "railway-server.js",
+  "description": "Complete SKOPEO.AI system with LibreOffice and AI - DigitalOcean Deployment",
+  "main": "digitalocean-server.js",
   "scripts": {
-    "start": "node railway-server.js",
+    "start": "node digitalocean-server.js",
     "build": "cd auth-interface && npm run build",
     "install:all": "npm install && cd auth-interface && npm install && cd ../auth-backend && npm install && cd ../gpt && npm install",
     "start:complete": "./start-complete-system.sh",
