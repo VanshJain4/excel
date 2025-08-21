@@ -1,28 +1,23 @@
 {
-  "name": "skopeo-ai-complete",
+  "name": "skopeo-ai-digitalocean",
   "version": "1.0.0",
-  "description": "Complete SKOPEO.AI system with LibreOffice and AI",
-  "main": "railway-server.js",
+  "description": "SKOPEO.AI Complete System for DigitalOcean",
+  "main": "digitalocean-server.js",
   "scripts": {
-    "start": "node railway-server.js",
-    "build": "cd auth-interface && npm run build",
+    "start": "node digitalocean-server.js",
+    "build": "cd auth-interface && npm install && npm run build",
     "install:all": "npm install && cd auth-interface && npm install && cd ../auth-backend && npm install && cd ../gpt && npm install",
-    "start:complete": "./start-complete-system.sh",
-    "stop:complete": "./stop-complete-system.sh",
-    "start:frontend": "cd auth-interface && npm start",
-    "start:backend": "cd auth-backend && npm start",
-    "start:wopi": "cd gpt && node server.js"
+    "dev": "node digitalocean-server.js"
   },
   "dependencies": {
-    "concurrently": "^8.2.2",
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "path": "^0.12.7",
     "dotenv": "^16.3.1",
     "mongoose": "^8.0.3",
     "express-session": "^1.17.3",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
+    "passport-local": "^1.0.0",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.1",
@@ -39,7 +34,7 @@
     "collabora",
     "spreadsheet",
     "wopi",
-    "railway"
+    "digitalocean"
   ],
   "author": "SKOPEO.AI Team",
   "license": "MIT"
