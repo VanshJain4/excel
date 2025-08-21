@@ -7,6 +7,9 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const passport = require('passport');
 
+// Import fetch for Node.js (if not available globally)
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -146,8 +149,39 @@ wopiRouter.get('/status', (req, res) => {
   res.json({
     status: 'WOPI server running',
     note: 'Collabora service needs to be deployed separately or use external Collabora instance',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    collaboraUrl: process.env.COLLABORA_URL || 'Not configured'
   });
+});
+
+// Add Collabora health check endpoint
+wopiRouter.get('/collabora-health', async (req, res) => {
+  const collaboraUrl = process.env.COLLABORA_URL || 'http://localhost:9980';
+  
+  try {
+    const response = await fetch(`${collaboraUrl}/hosting/capabilities`);
+    if (response.ok) {
+      res.json({
+        status: 'Collabora Online is running',
+        url: collaboraUrl,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      res.status(503).json({
+        status: 'Collabora Online is not responding',
+        url: collaboraUrl,
+        error: 'Service unavailable',
+        timestamp: new Date().toISOString()
+      });
+    }
+  } catch (error) {
+    res.status(503).json({
+      status: 'Collabora Online is not accessible',
+      url: collaboraUrl,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // WOPI endpoint: get file contents

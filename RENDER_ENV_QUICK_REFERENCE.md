@@ -37,6 +37,9 @@ NLP_SERVICES_API_KEY=your-nlp-api-key
 
 # Frontend
 REACT_APP_WOPI_SERVER_URL=https://your-app.onrender.com
+
+# Collabora Configuration
+COLLABORA_URL=https://your-collabora-service.onrender.com
 ```
 
 ## 🔐 Generate Secure Secrets

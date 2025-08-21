@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # Collabora Online service for Render
+  collabora:
+    image: collabora/code:latest
+    container_name: collabora
+    ports:
+      - "9980:9980"
+    environment:
+      - domain=localhost
+      - username=admin
+      - password=collabora_password
+      - dictionaries=en_US
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=true --o:net.frame_ancestors=* --o:net.post_allow.host=* --o:wopi.host.allowlist=*
+    cap_add:
+      - MKNOD
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9980/hosting/capabilities"]
+      interval: 30s
+      timeout: 10s
+      retries: 3 
