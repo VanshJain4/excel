@@ -1,13 +1,12 @@
-# Use Node.js 18
-FROM node:18-alpine
+# Build stage
+FROM node:18-alpine as build
 
-# Set working directory
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install ALL dependencies (including dev dependencies for build)
+# Install dependencies
 RUN npm install
 
 # Copy source code
@@ -16,11 +15,17 @@ COPY . .
 # Build the app
 RUN npm run build
 
-# Install serve globally
-RUN npm install -g serve
+# Production stage
+FROM nginx:alpine
+
+# Copy built app to nginx
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Copy nginx config
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Expose port
-EXPOSE $PORT
+EXPOSE 80
 
-# Start the app with explicit port
-CMD ["sh", "-c", "echo 'Starting server on port $PORT' && serve -s build -l $PORT"]
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

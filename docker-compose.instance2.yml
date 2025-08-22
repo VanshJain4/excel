@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  # Collabora (LibreOffice)
+  collabora:
+    image: collabora/code:latest
+    ports:
+      - "9980:9980"
+    environment:
+      - domain=localhost
+      - username=admin
+      - password=collabora_admin_2024
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=false --o:net.frame_ancestors=* --o:net.post_allow.host=* --o:wopi.host.allowlist=*
+    cap_add:
+      - MKNOD
+    restart: unless-stopped
