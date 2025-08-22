@@ -607,21 +607,15 @@
         function handleMouseMove(e) {
             if (!isResizing) return;
             
-            // Cancel previous animation frame
-            if (resizeAnimationId) {
-                cancelAnimationFrame(resizeAnimationId);
-            }
+            // Direct calculation for immediate response
+            const deltaX = e.clientX - startX;
+            const newWidth = startWidth - deltaX; // Moving left increases width, moving right decreases width
             
-            // Use requestAnimationFrame for smooth performance
-            resizeAnimationId = requestAnimationFrame(() => {
-                const deltaX = e.clientX - startX; // Fixed direction
-                const newWidth = startWidth - deltaX; // Subtract for left drag
-                
-                // Constrain width between 250px and 800px (consistent with buttons)
-                if (newWidth >= 250 && newWidth <= 800) {
-                    chatSidebar.style.width = newWidth + 'px';
-                }
-            });
+            // Debug logging
+            console.log(`Mouse: ${e.clientX}, Start: ${startX}, Delta: ${deltaX}, New Width: ${newWidth}`);
+            
+            // Remove constraints - let it resize freely
+            chatSidebar.style.width = newWidth + 'px';
         }
         
         function handleMouseUp() {
