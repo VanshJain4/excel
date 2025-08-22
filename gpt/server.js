@@ -43,6 +43,7 @@ async function fetchFileFromFirebase(fileId) {
                 fileSize: fields.fileSize?.integerValue || 0,
                 mimeType: fields.mimeType?.stringValue || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 fileContent: fields.fileContent?.stringValue || null,
+                isEmpty: fields.isEmpty?.booleanValue || false,
                 userId: fields.userId?.stringValue || 'anonymous',
                 createdAt: fields.createdAt?.timestampValue || null,
                 updatedAt: fields.updatedAt?.timestampValue || null
@@ -243,11 +244,13 @@ app.get("/wopi/files/:id/contents", async (req, res) => {
             return;
         }
         
-        if (!fileData.fileContent || fileData.isEmpty) {
+        // Check if file is empty or has no content
+        if (!fileData.fileContent || fileData.isEmpty || fileData.fileContent === null) {
             console.log(`No file content or empty file for: ${fileId}`);
             // Fallback to sample file
             const sampleExcelPath = path.join(__dirname, 'sample-spreadsheet.xlsx');
             if (fs.existsSync(sampleExcelPath)) {
+                console.log(`Serving empty template for: ${fileId}`);
                 res.sendFile(sampleExcelPath);
             } else {
                 res.status(404).json({ error: "File content not found" });
