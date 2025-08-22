@@ -270,9 +270,17 @@
             background: #0f6803;
             cursor: col-resize;
             transition: background 0.2s ease;
+            z-index: 10;
         }
         .resize-handle:hover {
             background: #0a4d02;
+            width: 8px;
+            left: -4px;
+        }
+        .resize-handle:active {
+            background: #0a4d02;
+            width: 8px;
+            left: -4px;
         }
         .resize-handle.hidden {
             display: none;
@@ -578,11 +586,17 @@
             }
         }
         
-        // Resize functionality
+        // Resize functionality with performance optimizations
+        let resizeAnimationId = null;
+        
         resizeHandle.addEventListener('mousedown', function(e) {
             isResizing = true;
             startX = e.clientX;
             startWidth = parseInt(getComputedStyle(chatSidebar).width, 10);
+            
+            // Add visual feedback
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
             
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
@@ -593,17 +607,36 @@
         function handleMouseMove(e) {
             if (!isResizing) return;
             
-            const deltaX = startX - e.clientX;
-            const newWidth = startWidth + deltaX;
-            
-            // Constrain width between 250px and 600px
-            if (newWidth >= 250 && newWidth <= 600) {
-                chatSidebar.style.width = newWidth + 'px';
+            // Cancel previous animation frame
+            if (resizeAnimationId) {
+                cancelAnimationFrame(resizeAnimationId);
             }
+            
+            // Use requestAnimationFrame for smooth performance
+            resizeAnimationId = requestAnimationFrame(() => {
+                const deltaX = e.clientX - startX; // Fixed direction
+                const newWidth = startWidth - deltaX; // Subtract for left drag
+                
+                // Constrain width between 250px and 800px (consistent with buttons)
+                if (newWidth >= 250 && newWidth <= 800) {
+                    chatSidebar.style.width = newWidth + 'px';
+                }
+            });
         }
         
         function handleMouseUp() {
             isResizing = false;
+            
+            // Reset cursor and selection
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            
+            // Cancel any pending animation
+            if (resizeAnimationId) {
+                cancelAnimationFrame(resizeAnimationId);
+                resizeAnimationId = null;
+            }
+            
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         }
