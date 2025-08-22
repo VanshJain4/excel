@@ -1,35 +1,31 @@
-# Use Node.js 18
-FROM node:18-alpine
+# Build stage
+FROM node:18-alpine as build
 
-# Install system dependencies
-RUN apk add --no-cache bash
-
-# Set working directory
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
 COPY auth-interface/package*.json ./auth-interface/
-COPY auth-backend/package*.json ./auth-backend/
 
 # Install dependencies
-RUN npm install
 RUN cd auth-interface && npm install
-RUN cd auth-backend && npm install
 
 # Copy source code
-COPY . .
+COPY auth-interface/ ./auth-interface/
 
-# Build frontend
+# Build the app
 RUN cd auth-interface && npm run build
 
-# Install serve globally
-RUN npm install -g serve
+# Production stage
+FROM nginx:alpine
 
-# Expose ports
-EXPOSE $PORT
-EXPOSE 3002
-EXPOSE 5001
+# Copy built app to nginx
+COPY --from=build /app/auth-interface/build /usr/share/nginx/html
 
-# Start the complete system
-CMD ["./start-complete-system.sh"]
+# Copy nginx config
+COPY auth-interface/nginx.conf /etc/nginx/nginx.conf
+
+# Expose port
+EXPOSE 8080
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]
