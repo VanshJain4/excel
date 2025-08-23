@@ -37,8 +37,7 @@ const CreateExcelButton = ({ user, onFileCreated }) => {
           onFileCreated(result);
         }
         
-        // Show success message
-        alert('Excel file created successfully! You can now edit it.');
+        // Success - no alert needed, file will open automatically
       }
     } catch (error) {
       setError(error.message || 'Failed to create file');

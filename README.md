@@ -103,7 +103,16 @@ docker-compose -f docker-compose.instance2.yml up -d
 - ✅ **Google Auth Working** - User authentication
 - ✅ **File Operations** - Upload, edit, save, delete
 - ✅ **LibreOffice Integration** - Full spreadsheet editing
-- 🔄 **AI Chat** - Echo functionality (ready for AI integration)
+- ✅ **AI Chat Sidebar** - Fully functional with smooth resize
+- ✅ **User Following Disabled** - No interface interference during resize
+
+## 🏷️ **Checkpoints**
+- **`CHECKPOINT-WORKING-RESIZE`** - All chat sidebar issues resolved
+  - ✅ Smooth bidirectional resize (left/right)
+  - ✅ User following completely disabled
+  - ✅ Socket connection errors fixed
+  - ✅ Event isolation working perfectly
+  - **Commit:** `e77aeb5`
 
 ## 💰 **Costs**
 - **Total:** ~$48/month
