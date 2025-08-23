@@ -420,7 +420,8 @@
         function updateIframeSrc() {
             const fileId = getFileIdFromUrl();
             const iframe = document.getElementById('collabora-iframe');
-            const wopiUrl = `http://147.182.150.232:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2F147.182.150.232%3A3002%2Fwopi%2Ffiles%2F${fileId}&permission=edit&disableuserfollowing=true`;
+            const wopiUrl = `http://147.182.150.232:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2F147.182.150.232%3A3002%2Fwopi%2Ffiles%2F${fileId}&permission=edit&nouserfollowing=true&nouserlist=true`;
+            console.log('Loading Collabora with URL:', wopiUrl);
             iframe.src = wopiUrl;
         }
         

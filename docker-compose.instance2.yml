@@ -10,7 +10,7 @@ services:
       - domain=localhost
       - username=admin
       - password=collabora_admin_2024
-      - extra_params=--o:ssl.enable=false --o:ssl.termination=false --o:net.frame_ancestors=* --o:net.post_allow.host=* --o:wopi.host.allowlist=*
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=false --o:net.frame_ancestors=* --o:net.post_allow.host=* --o:wopi.host.allowlist=* --o:user_interface.mode=notebookbar --o:user_interface.disable_user_following=true
     cap_add:
       - MKNOD
     restart: unless-stopped
