@@ -80,7 +80,7 @@
             border: none;
         }
         .chat-sidebar {
-            width: 350px;
+            width: 350px !important;
             background: #f8f9fa;
             color: #333;
             display: flex;
@@ -612,11 +612,15 @@
             // Debug logging
             console.log(`Mouse: ${e.clientX}, Start: ${startX}, Delta: ${deltaX}, New Width: ${newWidth}, Applied: ${newWidth}px`);
             
-            // Apply width immediately
-            chatSidebar.style.width = newWidth + 'px';
+            // Apply width with !important to override any CSS
+            chatSidebar.style.setProperty('width', newWidth + 'px', 'important');
             
             // Force a reflow to ensure the change is applied
             chatSidebar.offsetHeight;
+            
+            // Debug: Check if the width actually changed
+            const actualWidth = getComputedStyle(chatSidebar).width;
+            console.log(`Actual width after change: ${actualWidth}`);
         }
         
         function handleMouseUp() {
