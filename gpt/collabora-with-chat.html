@@ -424,7 +424,7 @@
             const userName = getUserNameFromUrl();
             
             const iframe = document.getElementById('collabora-iframe');
-            const wopiUrl = `http://147.182.150.232:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2F147.182.150.232%3A3002%2Fwopi%2Ffiles%2F${fileId}?userId=${encodeURIComponent(userId)}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}&permission=edit&nouserfollowing=true&nouserlist=true&nouserinfo=true&nouseravatar=true`;
+            const wopiUrl = `http://147.182.150.232:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2F147.182.150.232%3A3002%2Fwopi%2Ffiles%2F${fileId}%3FuserId%3D${encodeURIComponent(userId)}%26userEmail%3D${encodeURIComponent(userEmail)}%26userName%3D${encodeURIComponent(userName)}&permission=edit&nouserfollowing=true&nouserlist=true&nouserinfo=true&nouseravatar=true`;
             console.log('Loading Collabora with URL:', wopiUrl);
             iframe.src = wopiUrl;
         }
@@ -628,9 +628,21 @@
         function handleMouseMove(e) {
             if (!isResizing) return;
             
-            // Prevent event bubbling to Collabora
+            // Prevent event bubbling to Collabora - MORE AGGRESSIVE
             e.preventDefault();
             e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Block the event from reaching Collabora iframe
+            const iframe = document.getElementById('collabora-iframe');
+            if (iframe && iframe.contentWindow) {
+                try {
+                    // Try to prevent the iframe from receiving events
+                    iframe.style.pointerEvents = 'none';
+                } catch (err) {
+                    console.log('Could not disable iframe pointer events');
+                }
+            }
             
             // Direct calculation for immediate response
             const deltaX = e.clientX - startX;
@@ -667,6 +679,13 @@
             if (e) {
                 e.preventDefault();
                 e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+            
+            // Re-enable iframe pointer events
+            const iframe = document.getElementById('collabora-iframe');
+            if (iframe) {
+                iframe.style.pointerEvents = 'auto';
             }
             
             // Reset cursor and selection
