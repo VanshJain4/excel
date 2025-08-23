@@ -362,7 +362,7 @@ const Dashboard = () => {
       </AppBar>
 
       {/* Main Content */}
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 6, mb: 4, pt: 2 }}>
         {error && (
           <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
             {error}
@@ -379,7 +379,7 @@ const Dashboard = () => {
           <Grid container spacing={3} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' } }}>
             {/* Welcome Card */}
             <Grid xs={12} md={6}>
-              <Card sx={{ height: '100%', minHeight: 200 }}>
+              <Card sx={{ height: '100%', minHeight: 200, mt: 1 }}>
                 <CardContent sx={{ p: 3, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Avatar
@@ -407,7 +407,7 @@ const Dashboard = () => {
 
             {/* Quick Actions */}
             <Grid xs={12} md={6}>
-              <Paper sx={{ p: 3, height: '100%', minHeight: 200 }}>
+              <Paper sx={{ p: 3, height: '100%', minHeight: 200, mt: 1 }}>
                 <Typography variant="h6" gutterBottom>
                   Quick Actions
                 </Typography>
@@ -435,7 +435,7 @@ const Dashboard = () => {
           </Grid>
 
           {/* Bottom Row - Your Files */}
-          <Grid xs={12} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' }, mt: 3 }}>
+          <Grid xs={12} sx={{ width: { xs: '100%', md: '83.33%', lg: '66.67%' }, mt: 4 }}>
             <Paper sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
