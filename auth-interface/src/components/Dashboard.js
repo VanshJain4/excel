@@ -184,7 +184,8 @@ const Dashboard = () => {
   const openFileInLibreOffice = (file) => {
     // Open file in LibreOffice with the file ID and user info
     const wopiServerUrl = process.env.REACT_APP_WOPI_SERVER_URL || 'http://147.182.150.232:3002';
-    const libreOfficeUrl = `${wopiServerUrl}/collabora-with-chat.html?fileId=${file.id}&userId=${user.uid}&userEmail=${encodeURIComponent(user.email || '')}`;
+    const userName = user.displayName || user.email?.split('@')[0] || 'User';
+    const libreOfficeUrl = `${wopiServerUrl}/collabora-with-chat.html?fileId=${file.id}&userId=${user.uid}&userEmail=${encodeURIComponent(user.email || '')}&userName=${encodeURIComponent(userName)}`;
     window.open(libreOfficeUrl, '_blank');
   };
 

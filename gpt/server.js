@@ -156,7 +156,7 @@ app.get("/wopi/files/:id", async (req, res) => {
             Size: fileData.fileSize,
             Version: "1.0",
             OwnerId: fileData.userId,
-            UserId: fileData.userId,
+            UserId: userId, // Use the actual user ID from URL parameters
             UserCanWrite: true,
             UserCanNotWriteRelative: false,
             UserCanRename: false,
