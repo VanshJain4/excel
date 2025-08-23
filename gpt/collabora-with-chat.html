@@ -261,9 +261,9 @@
         }
         .resize-handle {
             position: absolute;
-            left: -3px;
+            left: -5px;
             top: 0;
-            width: 6px;
+            width: 10px;
             height: 100%;
             background: #0f6803;
             cursor: col-resize;
@@ -599,11 +599,17 @@
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
             
+            // Prevent event bubbling to Collabora
             e.preventDefault();
+            e.stopPropagation();
         });
         
         function handleMouseMove(e) {
             if (!isResizing) return;
+            
+            // Prevent event bubbling to Collabora
+            e.preventDefault();
+            e.stopPropagation();
             
             // Direct calculation for immediate response
             const deltaX = e.clientX - startX;
@@ -611,6 +617,12 @@
             
             // Debug logging
             console.log(`Mouse: ${e.clientX}, Start: ${startX}, Delta: ${deltaX}, New Width: ${newWidth}, Applied: ${newWidth}px`);
+            
+            // Prevent negative or very small widths
+            if (newWidth < 50) {
+                console.log(`Width too small (${newWidth}), clamping to 50px`);
+                newWidth = 50;
+            }
             
             // Apply width with !important to override any CSS
             chatSidebar.style.setProperty('width', newWidth + 'px', 'important');
@@ -621,10 +633,20 @@
             // Debug: Check if the width actually changed
             const actualWidth = getComputedStyle(chatSidebar).width;
             console.log(`Actual width after change: ${actualWidth}`);
+            
+            // Debug: Check if resize handle is still accessible
+            const handleRect = resizeHandle.getBoundingClientRect();
+            console.log(`Resize handle position: left=${handleRect.left}, width=${handleRect.width}`);
         }
         
-        function handleMouseUp() {
+        function handleMouseUp(e) {
             isResizing = false;
+            
+            // Prevent event bubbling to Collabora
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
             
             // Reset cursor and selection
             document.body.style.cursor = '';
