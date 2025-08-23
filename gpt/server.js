@@ -86,6 +86,11 @@ app.get("/wopi/files/:id", async (req, res) => {
     try {
         const fileId = req.params.id;
         
+        // Get user information from query parameters
+        const userId = req.query.userId || 'anonymous';
+        const userEmail = req.query.userEmail || 'user@example.com';
+        const userName = req.query.userName || 'User';
+        
         if (fileId === 'empty') {
             // Return info for empty file
             res.json({
@@ -127,11 +132,11 @@ app.get("/wopi/files/:id", async (req, res) => {
                 FileSharingUrl: "",
                 HostViewUrl: "",
                 SignoutUrl: "",
-                UserInfo: {
-                    Id: "anonymous",
-                    Name: "Anonymous User",
-                    Email: "anonymous@example.com"
-                }
+                            UserInfo: {
+                Id: userId,
+                Name: userName,
+                Email: userEmail
+            }
             });
             return;
         }
@@ -186,9 +191,9 @@ app.get("/wopi/files/:id", async (req, res) => {
             HostViewUrl: "",
             SignoutUrl: "",
             UserInfo: {
-                Id: fileData.userId,
-                Name: "User",
-                Email: "user@example.com"
+                Id: userId,
+                Name: userName,
+                Email: userEmail
             }
         });
     } catch (error) {
