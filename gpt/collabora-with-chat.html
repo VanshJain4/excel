@@ -81,14 +81,12 @@
         }
         .chat-sidebar {
             width: 350px;
-            min-width: 50px; /* Allow much smaller width */
             max-width: 800px;
             background: #f8f9fa;
             color: #333;
             display: flex;
             flex-direction: column;
             border-left: 1px solid #0f6803;
-            transition: width 0.3s ease;
             position: relative;
         }
         .chat-sidebar.hidden {
@@ -612,10 +610,13 @@
             const newWidth = startWidth - deltaX; // Moving left increases width, moving right decreases width
             
             // Debug logging
-            console.log(`Mouse: ${e.clientX}, Start: ${startX}, Delta: ${deltaX}, New Width: ${newWidth}`);
+            console.log(`Mouse: ${e.clientX}, Start: ${startX}, Delta: ${deltaX}, New Width: ${newWidth}, Applied: ${newWidth}px`);
             
-            // Remove constraints - let it resize freely
+            // Apply width immediately
             chatSidebar.style.width = newWidth + 'px';
+            
+            // Force a reflow to ensure the change is applied
+            chatSidebar.offsetHeight;
         }
         
         function handleMouseUp() {
