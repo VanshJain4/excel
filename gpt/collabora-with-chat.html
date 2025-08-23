@@ -607,7 +607,7 @@
             
             // Direct calculation for immediate response
             const deltaX = e.clientX - startX;
-            const newWidth = startWidth - deltaX; // Moving left increases width, moving right decreases width
+            const newWidth = startWidth + deltaX; // Moving left decreases width, moving right increases width
             
             // Debug logging
             console.log(`Mouse: ${e.clientX}, Start: ${startX}, Delta: ${deltaX}, New Width: ${newWidth}, Applied: ${newWidth}px`);
