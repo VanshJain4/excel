@@ -14,7 +14,7 @@ fi
 
 # Start LibreOffice Collabora
 echo "📄 Starting LibreOffice Collabora..."
-docker-compose -f docker-compose.simple.yml up -d
+docker compose -f docker-compose.simple.yml up -d
 
 # Wait for Collabora to start
 echo "⏳ Waiting for Collabora to start..."

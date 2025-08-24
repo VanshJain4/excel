@@ -1,758 +1,239 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <title>LibreOffice Calc with AI Assistant</title>
-    
-    <!-- Firebase SDK -->
-    <script type="module">
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-        import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
-        import { getFirestore, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
-        
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyAV8EITshJJO_-NGkBOMiU3gIIMs0vZirQ",
-            authDomain: "skopeo-ai.firebaseapp.com",
-            projectId: "skopeo-ai",
-            storageBucket: "skopeo-ai.firebasestorage.app",
-            messagingSenderId: "295265049654",
-            appId: "1:295265049654:web:486856ccde50928efe8c97",
-            measurementId: "G-S7Y1FDBM6L"
-        };
-        
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        
-        // Make Firebase available globally
-        window.auth = auth;
-        window.db = db;
-        window.doc = doc;
-        window.updateDoc = updateDoc;
-        window.serverTimestamp = serverTimestamp;
-        
-        // Get user info from URL parameters
-        const urlParams = new URLSearchParams(window.location.search);
-        const userId = urlParams.get('userId');
-        const userEmail = urlParams.get('userEmail');
-        
-        // Create a mock user object from URL parameters
-        if (userId && userEmail) {
-            window.currentUser = {
-                uid: userId,
-                email: userEmail,
-                displayName: userEmail.split('@')[0] // Use email prefix as display name
-            };
-            console.log('User info from URL:', window.currentUser);
-        }
-        
-        // Listen for auth state changes (fallback)
-        auth.onAuthStateChanged((user) => {
-            if (!window.currentUser) {
-                window.currentUser = user;
-            }
-        });
-    </script>
-    <style>
-        html, body {
-            margin: 0; padding: 0;
-            height: 100%;
-            font-family: Arial, sans-serif;
-            overflow: hidden;
-        }
-        .container {
-            display: flex;
-            height: 100vh;
-        }
-        .collabora-container {
-            flex: 1;
-            position: relative;
-            transition: margin-right 0.3s ease;
-        }
-        .collabora-container.chat-hidden {
-            margin-right: 0;
-        }
-        .collabora-iframe {
-            width: 100%;
-            height: 100%;
-            border: none;
-        }
-        .chat-sidebar {
-            width: 350px !important;
-            background: #f8f9fa;
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            border-left: 1px solid #0f6803;
-            position: relative;
-            flex-shrink: 0;
-        }
-        .chat-sidebar.hidden {
-            width: 0;
-            overflow: hidden;
-        }
-        .chat-sidebar.closed {
-            display: none;
-        }
-        
-        /* Custom Save Button Styles */
-        .save-button {
-            position: fixed;
-            top: 5px;
-            left: 45px;
-            z-index: 1000;
-            background: #0f6803;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-        }
-        
-        .save-button:hover {
-            background: #0a4d02;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        
-        .save-button:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .save-button .spinner {
-            display: none;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ffffff;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .save-button.saving .spinner {
-            display: inline-block;
-        }
-        
-        .save-button.saving .save-text {
-            display: none;
-        }
-        .chat-header {
-            background: #0f6803;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            border-bottom: 1px solid #0a4d02;
-            position: relative;
-        }
-        .chat-toggle {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #0f6803;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 5px 8px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: background 0.2s ease;
-        }
-        .chat-toggle:hover {
-            background: #0a4d02;
-        }
-        .chat-toggle.hidden {
-            background: #27ae60;
-        }
-        .chat-messages {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            background: #f8f9fa;
-        }
-        .message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 8px;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-        .message.user {
-            background: #0f6803;
-            color: white;
-            margin-left: auto;
-            text-align: right;
-        }
-        .message.ai {
-            background: #e8f0e3;
-            color: #333;
-            border: 1px solid #0f6803;
-            margin-right: auto;
-        }
-        .message-time {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-top: 5px;
-        }
-        .chat-input-container {
-            padding: 15px;
-            background: #f8f9fa;
-            border-top: 1px solid #0f6803;
-        }
-        .chat-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #0f6803;
-            border-radius: 5px;
-            background: white;
-            color: #333;
-            font-size: 14px;
-            box-sizing: border-box;
-        }
-        .chat-input:focus {
-            outline: none;
-            box-shadow: 0 0 5px #0f6803;
-            border-color: #0a4d02;
-        }
-        .send-button {
-            background: #0f6803;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-            width: 100%;
-            font-size: 14px;
-            transition: background 0.2s ease;
-        }
-        .send-button:hover {
-            background: #0a4d02;
-        }
-        .send-button:disabled {
-            background: #95a5a6;
-            cursor: not-allowed;
-        }
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #2c3e50;
-            font-size: 18px;
-        }
-        .resize-handle {
-            position: absolute;
-            left: -5px;
-            top: 0;
-            width: 10px;
-            height: 100%;
-            background: #0f6803;
-            cursor: col-resize;
-            transition: background 0.2s ease;
-            z-index: 10;
-        }
-        .resize-handle:hover {
-            background: #0a4d02;
-            width: 8px;
-            left: -4px;
-        }
-        .resize-handle:active {
-            background: #0a4d02;
-            width: 8px;
-            left: -4px;
-        }
-        .resize-handle.hidden {
-            display: none;
-        }
-        .chat-controls {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            display: flex;
-            gap: 5px;
-        }
-        .control-button {
-            background: #f8f9fa;
-            color: #333;
-            border: 1px solid #0f6803;
-            border-radius: 3px;
-            padding: 3px 6px;
-            cursor: pointer;
-            font-size: 10px;
-            transition: background 0.2s ease;
-        }
-        .control-button:hover {
-            background: #0f6803;
-            color: white;
-        }
-        .size-controls {
-            position: absolute;
-            top: 35px;
-            right: 10px;
-            display: flex;
-            gap: 3px;
-        }
-        .size-button {
-            background: #f8f9fa;
-            color: #333;
-            border: 1px solid #0f6803;
-            border-radius: 2px;
-            padding: 2px 4px;
-            cursor: pointer;
-            font-size: 8px;
-            transition: background 0.2s ease;
-        }
-        .size-button:hover {
-            background: #0f6803;
-            color: white;
-        }
-        .chat-reopen {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #0f6803;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            padding: 10px 15px;
-            cursor: pointer;
-            font-size: 14px;
-            z-index: 1000;
-            transition: background 0.2s ease;
-        }
-        .chat-reopen:hover {
-            background: #0a4d02;
-        }
-        .chat-reopen.hidden {
-            display: none;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <title>LibreOffice Calc with AI Assistant (Local)</title>
+
+  <!-- Injected at runtime by server/index.js in dev (optional).
+       If not injected, getEnv() will fall back to localhost defaults. -->
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+    import { getAuth, connectAuthEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+    import { getFirestore, doc, updateDoc, serverTimestamp, connectFirestoreEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+    import { getStorage, connectStorageEmulator } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js';
+
+    // ---- helper to read "injected" env or fallback ----
+    window.getEnv = function(name, fallback) {
+      return (window.__ENV && window.__ENV[name]) || fallback;
+    };
+
+    // Firebase configuration (keep your real project config)
+    const firebaseConfig = {
+      apiKey: "AIzaSyAV8EITshJJO_-NGkBOMiU3gIIMs0vZirQ",
+      authDomain: "skopeo-ai.firebaseapp.com",
+      projectId: "skopeo-ai",
+      storageBucket: "skopeo-ai.firebasestorage.app",
+      messagingSenderId: "295265049654",
+      appId: "1:295265049654:web:486856ccde50928efe8c97",
+      measurementId: "G-S7Y1FDBM6L"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // Expose for saveFile()
+    window.auth = auth;
+    window.db = db;
+    window.doc = doc;
+    window.updateDoc = updateDoc;
+    window.serverTimestamp = serverTimestamp;
+
+    // Emulators when local
+    const useEmulators =
+      (location.hostname === 'localhost' || location.hostname === '127.0.0.1') ||
+      window.getEnv('REACT_APP_USE_EMULATORS', 'false') === 'true';
+
+    if (useEmulators) {
+      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+      connectFirestoreEmulator(db, '127.0.0.1', 8080);
+      connectStorageEmulator(storage, '127.0.0.1', 9199);
+    }
+
+    // Mock user from URL (fallback to auth state)
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('userId');
+    const userEmail = urlParams.get('userEmail');
+
+    if (userId && userEmail) {
+      window.currentUser = {
+        uid: userId,
+        email: userEmail,
+        displayName: (userEmail.split('@')[0] || 'User')
+      };
+      console.log('User info from URL:', window.currentUser);
+    }
+
+    auth.onAuthStateChanged((user) => {
+      if (!window.currentUser) window.currentUser = user;
+    });
+  </script>
+
+  <style>
+    html, body { margin:0; padding:0; height:100%; font-family: Arial, sans-serif; overflow:hidden; }
+    .container { display:flex; height:100vh; }
+    .collabora-container { flex:1; position:relative; transition: margin-right .3s ease; }
+    .collabora-container.chat-hidden { margin-right:0; }
+    .collabora-iframe { width:100%; height:100%; border:none; }
+    .chat-sidebar { width:350px !important; background:#f8f9fa; color:#333; display:flex; flex-direction:column; border-left:1px solid #0f6803; flex-shrink:0; }
+    .chat-sidebar.closed { display:none; }
+    .save-button { position:fixed; top:5px; left:45px; z-index:1000; background:#0f6803; color:#fff; border:none; border-radius:3px; padding:8px; font-size:16px; font-weight:bold; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.2); width:32px; height:32px; display:flex; align-items:center; justify-content:center; }
+    .save-button:disabled { background:#6c757d; }
+    .spinner { display:none; width:16px; height:16px; border:2px solid #fff; border-top:2px solid transparent; border-radius:50%; animation:spin 1s linear infinite; }
+    .save-button.saving .spinner { display:inline-block; }
+    .save-button.saving .save-text { display:none; }
+    @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+    .chat-header { background:#0f6803; color:#fff; padding:15px; text-align:center; border-bottom:1px solid #0a4d02; position:relative; }
+    .chat-controls { position:absolute; top:10px; right:10px; display:flex; gap:5px; }
+    .control-button { background:#f8f9fa; color:#333; border:1px solid #0f6803; border-radius:3px; padding:3px 6px; cursor:pointer; font-size:10px; }
+    .chat-messages { flex:1; padding:15px; overflow-y:auto; background:#f8f9fa; }
+    .message { margin-bottom:15px; padding:10px; border-radius:8px; max-width:80%; word-wrap:break-word; }
+    .message.user { background:#0f6803; color:#fff; margin-left:auto; text-align:right; }
+    .message.ai { background:#e8f0e3; color:#333; border:1px solid #0f6803; margin-right:auto; }
+    .message-time { font-size:11px; opacity:.7; margin-top:5px; }
+    .chat-input-container { padding:15px; background:#f8f9fa; border-top:1px solid #0f6803; }
+    .chat-input { width:100%; padding:10px; border:1px solid #0f6803; border-radius:5px; }
+    .send-button { background:#0f6803; color:#fff; border:none; padding:10px 15px; border-radius:5px; cursor:pointer; margin-top:10px; width:100%; }
+    .loading { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); color:#2c3e50; font-size:18px; }
+    .chat-reopen { position:fixed; top:20px; right:20px; background:#0f6803; color:#fff; border:none; border-radius:5px; padding:10px 15px; cursor:pointer; font-size:14px; z-index:1000; }
+    .chat-reopen.hidden { display:none; }
+  </style>
 </head>
 <body>
-    <!-- Custom Save Button -->
-    <button class="save-button" id="save-button" onclick="saveFile()" title="Save File">
-        <div class="spinner"></div>
-        <span class="save-text">💾</span>
-    </button>
-    
-    <div class="container">
-        <div class="collabora-container" id="collabora-container">
-            <div class="loading" id="loading">Loading LibreOffice Calc...</div>
-            <iframe 
-                class="collabora-iframe" 
-                id="collabora-iframe"
-                onload="hideLoading()">
-            </iframe>
-        </div>
-        
-        <!-- Chat Sidebar -->
-        <div class="chat-sidebar" id="chat-sidebar">
-            <div class="resize-handle" id="resize-handle"></div>
-            <div class="chat-header">
-                <h3>🤖 AI Assistant</h3>
-                <p style="margin: 5px 0; font-size: 12px; opacity: 0.8;">Chat with AI about your spreadsheet</p>
-                <div class="chat-controls">
-                    <button class="control-button" onclick="closeChat()" id="close-button">Close</button>
-                    <button class="control-button" onclick="resetChatSize()">Reset</button>
-                </div>
-                <div class="size-controls">
-                    <button class="size-button" onclick="increaseChatSize(50)">+50</button>
-                    <button class="size-button" onclick="increaseChatSize(100)">+100</button>
-                    <button class="size-button" onclick="increaseChatSize(200)">+200</button>
-                </div>
-            </div>
-            
-            <div class="chat-messages" id="chat-messages">
-                <div class="message ai">
-                    <div>Hello! I'm your AI assistant. I can help you with your LibreOffice Calc spreadsheet. Try typing a message below!</div>
-                    <div class="message-time">Just now</div>
-                </div>
-            </div>
-            
-            <div class="chat-input-container">
-                <input type="text" 
-                       class="chat-input" 
-                       id="chat-input" 
-                       placeholder="Type your message here..."
-                       maxlength="500">
-                <button class="send-button" id="send-button" onclick="sendMessage()">Send Message</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Reopen Chat Button -->
-    <button class="chat-reopen hidden" id="reopen-button" onclick="reopenChat()">
-        🤖 Reopen AI Chat
-    </button>
+  <!-- Save -->
+  <button class="save-button" id="save-button" onclick="saveFile()" title="Save File">
+    <div class="spinner"></div>
+    <span class="save-text">💾</span>
+  </button>
 
-    <script>
-        // Hide loading when iframe loads
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-        
-        // Get file ID from URL parameters
-        function getFileIdFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('fileId') || '123'; // Default to '123' if no fileId provided
-        }
-        
-        // Update iframe src with the correct file ID
-        function updateIframeSrc() {
-            const fileId = getFileIdFromUrl();
-            const userId = getUserIdFromUrl();
-            const userEmail = getUserEmailFromUrl();
-            const userName = getUserNameFromUrl();
-            
-            const iframe = document.getElementById('collabora-iframe');
-            const wopiUrl = `http://147.182.150.232:9980/browser/dist/cool.html?WOPISrc=http%3A%2F%2F147.182.150.232%3A3002%2Fwopi%2Ffiles%2F${fileId}%3FuserId%3D${encodeURIComponent(userId)}%26userEmail%3D${encodeURIComponent(userEmail)}%26userName%3D${encodeURIComponent(userName)}&permission=edit&nouserfollowing=true&nouserlist=true&nouserinfo=true&nouseravatar=true`;
-            console.log('Loading Collabora with URL:', wopiUrl);
-            iframe.src = wopiUrl;
-        }
-        
-        // Get user information from URL parameters
-        function getUserIdFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('userId') || 'anonymous';
-        }
-        
-        function getUserEmailFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('userEmail') || 'user@example.com';
-        }
-        
-        function getUserNameFromUrl() {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('userName') || 'User';
-        }
-        
-        // Initialize with the correct file
-        updateIframeSrc();
-        
-        // Custom Save Function - Firebase base64 approach
-        async function saveFile() {
-            const saveButton = document.getElementById('save-button');
-            const fileId = getFileIdFromUrl();
-            
-            console.log('Save attempt - File ID:', fileId);
-            console.log('Current user:', currentUser);
-            
-            // Don't save if it's the empty file
-            if (fileId === 'empty') {
-                alert('Please upload a file first before saving.');
-                return;
-            }
-            
-            // Check if user is logged in
-            if (!currentUser) {
-                console.error('No user found for save operation');
-                alert('Please log in first. If you are already logged in, try refreshing the page.');
-                return;
-            }
-            
-            try {
-                // Show saving state
-                saveButton.classList.add('saving');
-                saveButton.disabled = true;
-                
-                // Get the current file from LibreOffice
-                const iframe = document.getElementById('collabora-iframe');
-                const iframeWindow = iframe.contentWindow;
-                
-                // Trigger LibreOffice to save its current state to WOPI server
-                iframeWindow.postMessage({
-                    type: 'save',
-                    action: 'save'
-                }, '*');
-                
-                // Wait for LibreOffice to save to WOPI server
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                
-                // Now download the saved file from WOPI server
-                console.log('Downloading file from WOPI server...');
-                const response = await fetch(`http://147.182.150.232:3002/wopi/files/${fileId}/contents?nocache=${Date.now()}`);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to get current file content');
-                }
-                
-                const fileBlob = await response.blob();
-                console.log('Downloaded file size:', fileBlob.size);
-                console.log('Downloaded file type:', fileBlob.type);
-                
-                // Convert blob to base64
-                const base64 = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.readAsDataURL(fileBlob);
-                });
-                
-                // Update file in Firebase Firestore
-                const fileDoc = doc(db, 'files', fileId);
-                await updateDoc(fileDoc, {
-                    fileContent: base64,
-                    fileSize: fileBlob.size,
-                    updatedAt: serverTimestamp()
-                });
-                
-                console.log('File updated in Firebase:', fileId);
-                console.log('New file size:', fileBlob.size);
-                console.log('Base64 length:', base64.length);
-                
-                // Show success message
-                showMessage('File saved to Firebase successfully! Please refresh your dashboard to see the changes.', 'success');
-                
-            } catch (error) {
-                console.error('Save error:', error);
-                showMessage('Failed to save file: ' + error.message, 'error');
-            } finally {
-                // Reset button state
-                saveButton.classList.remove('saving');
-                saveButton.disabled = false;
-            }
-        }
-        
-        // Show message function
-        function showMessage(message, type = 'info') {
-            // Create a temporary message element
-            const messageDiv = document.createElement('div');
-            messageDiv.style.cssText = `
-                position: fixed;
-                top: 80px;
-                left: 20px;
-                z-index: 1001;
-                padding: 12px 20px;
-                border-radius: 5px;
-                color: white;
-                font-weight: bold;
-                background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                transition: opacity 0.3s ease;
-            `;
-            messageDiv.textContent = message;
-            
-            document.body.appendChild(messageDiv);
-            
-            // Remove after 3 seconds
-            setTimeout(() => {
-                messageDiv.style.opacity = '0';
-                setTimeout(() => {
-                    document.body.removeChild(messageDiv);
-                }, 300);
-            }, 3000);
-        }
-        
-        // Chat functionality
-        const chatMessages = document.getElementById('chat-messages');
-        const chatInput = document.getElementById('chat-input');
-        const sendButton = document.getElementById('send-button');
-        const chatSidebar = document.getElementById('chat-sidebar');
-        const collaboraContainer = document.getElementById('collabora-container');
-        const closeButton = document.getElementById('close-button');
-        const resizeHandle = document.getElementById('resize-handle');
-        const reopenButton = document.getElementById('reopen-button');
-        
-        let isChatClosed = false;
-        let isResizing = false;
-        let startX, startWidth;
-        
-        // Function to close chat completely
-        function closeChat() {
-            isChatClosed = true;
-            chatSidebar.classList.add('closed');
-            collaboraContainer.classList.add('chat-hidden');
-            reopenButton.classList.remove('hidden');
-        }
-        
-        // Function to reopen chat
-        function reopenChat() {
-            isChatClosed = false;
-            chatSidebar.classList.remove('closed');
-            collaboraContainer.classList.remove('chat-hidden');
-            reopenButton.classList.add('hidden');
-        }
-        
-        // Function to reset chat size
-        function resetChatSize() {
-            chatSidebar.style.width = '350px';
-        }
-        
-        // Function to increase chat size manually
-        function increaseChatSize(amount) {
-            const currentWidth = parseInt(getComputedStyle(chatSidebar).width, 10);
-            const newWidth = currentWidth + amount;
-            if (newWidth >= 250 && newWidth <= 800) {
-                chatSidebar.style.width = newWidth + 'px';
-            }
-        }
-        
-        // Resize functionality with performance optimizations
-        let resizeAnimationId = null;
-        
-        resizeHandle.addEventListener('mousedown', function(e) {
-            isResizing = true;
-            startX = e.clientX;
-            startWidth = parseInt(getComputedStyle(chatSidebar).width, 10);
-            
-            // Add visual feedback
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-            
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            
-            // Prevent event bubbling to Collabora
-            e.preventDefault();
-            e.stopPropagation();
+  <div class="container">
+    <div class="collabora-container" id="collabora-container">
+      <div class="loading" id="loading">Loading LibreOffice Calc...</div>
+      <iframe class="collabora-iframe" id="collabora-iframe" onload="hideLoading()"></iframe>
+    </div>
+
+    <div class="chat-sidebar" id="chat-sidebar">
+      <div class="chat-header">
+        <h3>🤖 AI Assistant</h3>
+        <p style="margin:5px 0; font-size:12px; opacity:.8;">Chat with AI about your spreadsheet</p>
+        <div class="chat-controls">
+          <button class="control-button" onclick="closeChat()">Close</button>
+          <button class="control-button" onclick="resetChatSize()">Reset</button>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+        <div class="message ai">
+          <div>Hello! I can help with your Calc sheet. Try typing below.</div>
+          <div class="message-time">Just now</div>
+        </div>
+      </div>
+
+      <div class="chat-input-container">
+        <input type="text" id="chat-input" class="chat-input" placeholder="Type your message..." maxlength="500" />
+        <button class="send-button" id="send-button" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+
+  <button class="chat-reopen hidden" id="reopen-button" onclick="reopenChat()">🤖 Reopen AI Chat</button>
+
+  <script>
+    function hideLoading(){ document.getElementById('loading').style.display='none'; }
+
+    function getFileIdFromUrl(){ return new URLSearchParams(location.search).get('fileId') || '123'; }
+    function getUserIdFromUrl(){ return new URLSearchParams(location.search).get('userId') || 'anonymous'; }
+    function getUserEmailFromUrl(){ return new URLSearchParams(location.search).get('userEmail') || 'user@example.com'; }
+    function getUserNameFromUrl(){ return new URLSearchParams(location.search).get('userName') || 'User'; }
+
+    function updateIframeSrc(){
+      const fileId = getFileIdFromUrl();
+      const userId = getUserIdFromUrl();
+      const userEmail = getUserEmailFromUrl();
+      const userName = getUserNameFromUrl();
+
+      const codeBase = window.getEnv('REACT_APP_CODE_BASE_URL', 'http://localhost:9980');
+      const wopiBase = window.getEnv('REACT_APP_WOPI_SERVER_URL','http://localhost:3002');
+      const wopiSrc  = `${wopiBase}/wopi/files/${fileId}?userId=${encodeURIComponent(userId)}&userEmail=${encodeURIComponent(userEmail)}&userName=${encodeURIComponent(userName)}`;
+
+      const url = `${codeBase}/browser/dist/cool.html?WOPISrc=${encodeURIComponent(wopiSrc)}&permission=edit&nouserfollowing=true&nouserlist=true&nouserinfo=true&nouseravatar=true`;
+      console.log('Loading Collabora (local) with URL:', url);
+
+      document.getElementById('collabora-iframe').src = url;
+    }
+    updateIframeSrc();
+
+    async function saveFile(){
+      const saveButton = document.getElementById('save-button');
+      const fileId = getFileIdFromUrl();
+      if (fileId === 'empty'){ alert('Upload a file first.'); return; }
+      if (!window.currentUser){ alert('Please log in first.'); return; }
+
+      try{
+        saveButton.classList.add('saving'); saveButton.disabled = true;
+
+        const iframe = document.getElementById('collabora-iframe');
+        iframe.contentWindow.postMessage({ type:'save', action:'save' }, '*');
+
+        await new Promise(r => setTimeout(r, 3000)); // give CODE time to persist to WOPI
+
+        const wopiBase = window.getEnv('REACT_APP_WOPI_SERVER_URL','http://localhost:3002');
+        const res = await fetch(`${wopiBase}/wopi/files/${fileId}/contents?nocache=${Date.now()}`);
+        if(!res.ok) throw new Error('Failed to get current file content');
+        const blob = await res.blob();
+
+        const base64 = await new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
         });
-        
-        function handleMouseMove(e) {
-            if (!isResizing) return;
-            
-            // Prevent event bubbling to Collabora - MORE AGGRESSIVE
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            // Block the event from reaching Collabora iframe
-            const iframe = document.getElementById('collabora-iframe');
-            if (iframe && iframe.contentWindow) {
-                try {
-                    // Try to prevent the iframe from receiving events
-                    iframe.style.pointerEvents = 'none';
-                } catch (err) {
-                    console.log('Could not disable iframe pointer events');
-                }
-            }
-            
-            // Direct calculation for immediate response
-            const deltaX = e.clientX - startX;
-            const newWidth = startWidth - deltaX; // Moving left increases width, moving right decreases width
-            
-            // Debug logging
-            console.log(`Mouse: ${e.clientX}, Start: ${startX}, Delta: ${deltaX}, New Width: ${newWidth}, Applied: ${newWidth}px`);
-            
-            // Prevent negative or very small widths
-            if (newWidth < 50) {
-                console.log(`Width too small (${newWidth}), clamping to 50px`);
-                newWidth = 50;
-            }
-            
-            // Apply width with !important to override any CSS
-            chatSidebar.style.setProperty('width', newWidth + 'px', 'important');
-            
-            // Force a reflow to ensure the change is applied
-            chatSidebar.offsetHeight;
-            
-            // Debug: Check if the width actually changed
-            const actualWidth = getComputedStyle(chatSidebar).width;
-            console.log(`Actual width after change: ${actualWidth}`);
-            
-            // Debug: Check if resize handle is still accessible
-            const handleRect = resizeHandle.getBoundingClientRect();
-            console.log(`Resize handle position: left=${handleRect.left}, width=${handleRect.width}`);
-        }
-        
-        function handleMouseUp(e) {
-            isResizing = false;
-            
-            // Prevent event bubbling to Collabora
-            if (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-            }
-            
-            // Re-enable iframe pointer events
-            const iframe = document.getElementById('collabora-iframe');
-            if (iframe) {
-                iframe.style.pointerEvents = 'auto';
-            }
-            
-            // Reset cursor and selection
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-            
-            // Cancel any pending animation
-            if (resizeAnimationId) {
-                cancelAnimationFrame(resizeAnimationId);
-                resizeAnimationId = null;
-            }
-            
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        }
-        
-        // Function to add a message to the chat
-        function addMessage(message, isUser = false) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user' : 'ai'}`;
-            
-            const messageText = document.createElement('div');
-            messageText.textContent = message;
-            
-            const messageTime = document.createElement('div');
-            messageTime.className = 'message-time';
-            messageTime.textContent = new Date().toLocaleTimeString();
-            
-            messageDiv.appendChild(messageText);
-            messageDiv.appendChild(messageTime);
-            
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-        
-        // Function to send a message
-        function sendMessage() {
-            const message = chatInput.value.trim();
-            if (message === '') return;
-            
-            // Add user message
-            addMessage(message, true);
-            
-            // Clear input
-            chatInput.value = '';
-            
-            // Simulate AI thinking (you can remove this later)
-            sendButton.disabled = true;
-            sendButton.textContent = 'Thinking...';
-            
-            // Echo the message back (simple AI response)
-            setTimeout(() => {
-                addMessage(`You said: "${message}"`);
-                sendButton.disabled = false;
-                sendButton.textContent = 'Send Message';
-            }, 1000);
-        }
-        
-        // Allow Enter key to send message
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !sendButton.disabled) {
-                sendMessage();
-            }
-        });
-        
-        // Auto-focus on chat input
-        chatInput.focus();
-    </script>
+
+        const { db, doc, updateDoc, serverTimestamp } = window;
+        const fileDoc = doc(db, 'files', fileId);
+        await updateDoc(fileDoc, { fileContent: base64, fileSize: blob.size, updatedAt: serverTimestamp() });
+
+        showToast('File saved to Firebase (local)!');
+      }catch(err){
+        console.error(err);
+        showToast('Save failed: ' + err.message, 'error');
+      }finally{
+        saveButton.classList.remove('saving'); saveButton.disabled = false;
+      }
+    }
+
+    function showToast(msg, type='success'){
+      const div = document.createElement('div');
+      div.style.cssText = `position:fixed; top:80px; left:20px; z-index:1001; padding:12px 20px; border-radius:5px; color:white; font-weight:bold; background:${type==='error'?'#dc3545':'#28a745'}; box-shadow:0 2px 8px rgba(0,0,0,.2)`;
+      div.textContent = msg; document.body.appendChild(div);
+      setTimeout(()=>{ div.style.opacity='0'; setTimeout(()=>div.remove(),300); }, 2500);
+    }
+
+    // very light chat mock
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const sendButton = document.getElementById('send-button');
+
+    function addMessage(text, isUser=false){
+      const box = document.createElement('div');
+      box.className = `message ${isUser?'user':'ai'}`;
+      box.innerHTML = `<div>${text}</div><div class="message-time">${new Date().toLocaleTimeString()}</div>`;
+      chatMessages.appendChild(box);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    function sendMessage(){
+      const msg = chatInput.value.trim(); if(!msg) return;
+      addMessage(msg, true); chatInput.value=''; sendButton.disabled=true; sendButton.textContent='Thinking...';
+      setTimeout(()=>{ addMessage(`You said: "${msg}"`); sendButton.disabled=false; sendButton.textContent='Send'; }, 700);
+    }
+    function closeChat(){ document.querySelector('.chat-sidebar').classList.add('closed'); document.getElementById('reopen-button').classList.remove('hidden'); }
+    function reopenChat(){ document.querySelector('.chat-sidebar').classList.remove('closed'); document.getElementById('reopen-button').classList.add('hidden'); }
+    function resetChatSize(){ document.querySelector('.chat-sidebar').style.width='350px'; }
+    chatInput.addEventListener('keypress', e => { if(e.key==='Enter' && !sendButton.disabled) sendMessage(); });
+    chatInput.focus();
+  </script>
 </body>
-</html> 
+</html>
+
