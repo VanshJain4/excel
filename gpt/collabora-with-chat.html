@@ -6,6 +6,17 @@
     
     <!-- Firebase SDK -->
     <script type="module">
+        // Define hideLoading function immediately to prevent errors
+        function hideLoading() {
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+        }
+        
+        // Also define it on window for global access
+        window.hideLoading = hideLoading;
+        
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
         import { getFirestore, doc, updateDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
@@ -63,6 +74,13 @@
             isDevelopment: isDevelopment,
             isDigitalOceanApp: isDigitalOceanApp,
             hostname: window.location.hostname
+        });
+        
+        // Debug: Log the actual hostname being detected
+        console.log('DEBUG - Hostname detection:', {
+            hostname: window.location.hostname,
+            includesOndigitalocean: window.location.hostname.includes('ondigitalocean.app'),
+            isLocalhost: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         });
         
         // Force cache refresh
