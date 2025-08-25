@@ -8,8 +8,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "80:80"
+    env_file:
+      - .env
     environment:
-      - REACT_APP_WOPI_SERVER_URL=http://localhost:3002
+      - REACT_APP_WOPI_SERVER_URL=${WOPI_SERVER_URL}
     depends_on:
       - wopi-server
     networks:
@@ -22,8 +24,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3002:3002"
+    env_file:
+      - .env
     environment:
-      - PORT=3002
+      - PORT=${WOPI_SERVER_PORT}
     networks:
       - skopeo-network
 

@@ -10,7 +10,7 @@ app.use(express.json());
 app.use(express.raw({ type: 'application/octet-stream', limit: '50mb' }));
 app.use(express.static(__dirname));
 
-const PORT = 3002;
+const PORT = process.env.WOPI_SERVER_PORT || 3002;
 
 // Firebase configuration
 const firebaseConfig = {

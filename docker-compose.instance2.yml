@@ -5,9 +5,11 @@ services:
   collabora:
     image: collabora/code:latest
     ports:
-      - "9980:9980"
+      - "${COLLABORA_PORT}:9980"
+    env_file:
+      - .env
     environment:
-      - domain=localhost
+      - domain=${COLLABORA_HOST}
       - username=admin
       - password=collabora_admin_2024
       - extra_params=--o:ssl.enable=false --o:ssl.termination=false --o:net.frame_ancestors=* --o:net.post_allow.host=* --o:wopi.host.allowlist=* --o:user_interface.mode=notebookbar --o:user_interface.disable_user_following=true --o:user_interface.disable_user_list=true --o:user_interface.disable_user_info=true
