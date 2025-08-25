@@ -26,6 +26,97 @@ const firebaseConfig = {
 // Firebase REST API endpoints
 const FIRESTORE_BASE_URL = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents`;
 
+// Helper function to update file in Firebase Firestore
+async function updateFileInFirebase(fileId, fileContent, fileName) {
+    try {
+        console.log(`🔄 Updating Firebase for file ${fileId}...`);
+        const url = `${FIRESTORE_BASE_URL}/files/${fileId}`;
+        
+        // First, get the current file data to preserve existing fields
+        const currentFileData = await fetchFileFromFirebase(fileId);
+        if (!currentFileData) {
+            console.error(`❌ Could not fetch current file data for ${fileId}`);
+            return false;
+        }
+        
+        // Convert buffer to base64
+        const base64Content = fileContent.toString('base64');
+        console.log(`📊 File size: ${fileContent.length} bytes, Base64 length: ${base64Content.length} chars`);
+        
+        // Preserve all existing fields and update only the ones we want to change
+        const updateData = {
+            fields: {
+                // Preserve existing fields
+                fileName: {
+                    stringValue: currentFileData.fileName || 'spreadsheet.xlsx'
+                },
+                originalName: {
+                    stringValue: currentFileData.fileName || 'spreadsheet.xlsx'
+                },
+                userId: {
+                    stringValue: currentFileData.userId || 'anonymous'
+                },
+                mimeType: {
+                    stringValue: currentFileData.mimeType || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                },
+                fileType: {
+                    stringValue: currentFileData.fileName ? currentFileData.fileName.split('.').pop().toLowerCase() : 'xlsx'
+                },
+                description: {
+                    stringValue: currentFileData.description || ''
+                },
+                isPublic: {
+                    booleanValue: currentFileData.isPublic || false
+                },
+                tags: {
+                    arrayValue: {
+                        values: currentFileData.tags || []
+                    }
+                },
+                storageType: {
+                    stringValue: currentFileData.storageType || 'firestore-base64'
+                },
+                isEmpty: {
+                    booleanValue: currentFileData.isEmpty || false
+                },
+                createdAt: {
+                    timestampValue: currentFileData.createdAt || new Date().toISOString()
+                },
+                // Update these fields
+                fileContent: {
+                    stringValue: base64Content
+                },
+                fileSize: {
+                    integerValue: fileContent.length
+                },
+                updatedAt: {
+                    timestampValue: new Date().toISOString()
+                }
+            }
+        };
+        
+        console.log(`🌐 Making PATCH request to Firebase: ${url}`);
+        
+        // Use PATCH to update the document
+        const response = await axios.patch(url, updateData, {
+            params: {
+                key: firebaseConfig.apiKey
+            }
+        });
+        
+        console.log(`✅ Firebase sync successful for file ${fileId}, size: ${fileContent.length} bytes`);
+        console.log(`📝 Firebase response status: ${response.status}`);
+        return true;
+    } catch (error) {
+        console.error('❌ Error updating file in Firebase:', error.message);
+        if (error.response) {
+            console.error('📋 Firebase error response:', error.response.data);
+            console.error('📊 Firebase error status:', error.response.status);
+        }
+        return false;
+    }
+}
+
 // Helper function to fetch file from Firebase Firestore
 async function fetchFileFromFirebase(fileId) {
     try {
@@ -334,9 +425,52 @@ app.post("/wopi/files/:id/contents", async (req, res) => {
         
         console.log(`WOPI: Stored updated content for ${fileId}, size: ${fileContent.length} bytes`);
         
+        // Automatically sync to Firebase in the background
+        console.log(`🔄 Starting auto-sync to Firebase for ${fileId}...`);
+        updateFileInFirebase(fileId, fileContent, `file-${fileId}`).then(success => {
+            if (success) {
+                console.log(`✅ Auto-sync to Firebase completed for ${fileId}`);
+            } else {
+                console.log(`❌ Auto-sync to Firebase failed for ${fileId}`);
+            }
+        }).catch(error => {
+            console.error(`💥 Auto-sync to Firebase error for ${fileId}:`, error.message);
+        });
+        
         res.sendStatus(200);
     } catch (error) {
         console.error("Error saving file:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+// Manual sync endpoint to force Firebase update
+app.post("/sync-to-firebase/:fileId", async (req, res) => {
+    try {
+        const fileId = req.params.fileId;
+        
+        // Check if we have updated content in temp storage
+        if (!global.tempFileStorage || !global.tempFileStorage.has(fileId)) {
+            return res.status(404).json({ error: "No updated content found for this file" });
+        }
+        
+        const tempData = global.tempFileStorage.get(fileId);
+        
+        // Sync to Firebase
+        const success = await updateFileInFirebase(fileId, tempData.content, `file-${fileId}`);
+        
+        if (success) {
+            res.json({ 
+                success: true, 
+                message: "File synced to Firebase successfully",
+                fileSize: tempData.content.length,
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.status(500).json({ error: "Failed to sync file to Firebase" });
+        }
+    } catch (error) {
+        console.error('Error syncing to Firebase:', error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
@@ -377,8 +511,29 @@ app.get("/debug/files", async (req, res) => {
     }
 });
 
+// Cleanup old temporary files every 30 minutes
+setInterval(() => {
+    if (global.tempFileStorage) {
+        const now = Date.now();
+        const thirtyMinutesAgo = now - (30 * 60 * 1000);
+        let cleanedCount = 0;
+        
+        for (const [fileId, data] of global.tempFileStorage.entries()) {
+            if (data.timestamp < thirtyMinutesAgo) {
+                global.tempFileStorage.delete(fileId);
+                cleanedCount++;
+            }
+        }
+        
+        if (cleanedCount > 0) {
+            console.log(`🧹 Cleaned up ${cleanedCount} old temporary files`);
+        }
+    }
+}, 30 * 60 * 1000); // 30 minutes
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 WOPI host running on http://0.0.0.0:${PORT}`);
     console.log(`📁 Firebase project: ${firebaseConfig.projectId}`);
     console.log(`🔍 Debug endpoint: http://localhost:${PORT}/debug/files`);
+    console.log(`🔄 Auto-sync to Firebase: ENABLED`);
 }); 
