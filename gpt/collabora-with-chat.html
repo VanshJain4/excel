@@ -4,8 +4,8 @@
     <meta charset="utf-8">
     <title>LibreOffice Calc with AI Assistant</title>
     
-    <!-- Firebase SDK -->
-    <script type="module">
+    <!-- Define hideLoading function globally first -->
+    <script>
         // Define hideLoading function immediately to prevent errors
         function hideLoading() {
             const loadingElement = document.getElementById('loading');
@@ -16,6 +16,10 @@
         
         // Also define it on window for global access
         window.hideLoading = hideLoading;
+    </script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
         
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
         import { getAuth } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
@@ -85,14 +89,6 @@
         
         // Force cache refresh
         console.log('Cache busting timestamp:', Date.now());
-        
-        // Define hideLoading function early to prevent errors
-        window.hideLoading = function() {
-            const loadingElement = document.getElementById('loading');
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
-            }
-        };
         
         // Get user info from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
