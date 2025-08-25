@@ -154,65 +154,7 @@
             display: none;
         }
         
-        /* Custom Save Button Styles */
-        .save-button {
-            position: fixed;
-            top: 5px;
-            left: 45px;
-            z-index: 1000;
-            background: #0f6803;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            padding: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 32px;
-            height: 32px;
-        }
-        
-        .save-button:hover {
-            background: #0a4d02;
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        
-        .save-button:disabled {
-            background: #6c757d;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .save-button .spinner {
-            display: none;
-            width: 16px;
-            height: 16px;
-            border: 2px solid #ffffff;
-            border-top: 2px solid transparent;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .save-button.saving .spinner {
-            display: inline-block;
-        }
-        
 
-        
-        .save-button.saving .save-text {
-            display: none;
-        }
         .chat-header {
             background: #0f6803;
             color: white;
@@ -407,11 +349,7 @@
     </style>
 </head>
 <body>
-    <!-- Custom Save Button -->
-    <button class="save-button" id="save-button" onclick="saveFile()" title="Save File">
-        <div class="spinner"></div>
-        <span class="save-text">💾</span>
-    </button>
+
     
 
     
@@ -536,119 +474,9 @@
             updateIframeSrc();
         }, 100);
         
-        // Custom Save Function - Firebase base64 approach
-        async function saveFile() {
-            const saveButton = document.getElementById('save-button');
-            const fileId = getFileIdFromUrl();
-            
-            console.log('Save attempt - File ID:', fileId);
-            console.log('Current user:', currentUser);
-            
-            // Don't save if it's the empty file
-            if (fileId === 'empty') {
-                alert('Please upload a file first before saving.');
-                return;
-            }
-            
-            // Check if user is logged in
-            if (!currentUser) {
-                console.error('No user found for save operation');
-                alert('Please log in first. If you are already logged in, try refreshing the page.');
-                return;
-            }
-            
-            try {
-                // Show saving state
-                saveButton.classList.add('saving');
-                saveButton.disabled = true;
-                
-                // Get the current file from LibreOffice
-                const iframe = document.getElementById('collabora-iframe');
-                const iframeWindow = iframe.contentWindow;
-                
-                // Trigger LibreOffice to save its current state to WOPI server
-                iframeWindow.postMessage({
-                    type: 'save',
-                    action: 'save'
-                }, '*');
-                
-                // Wait for LibreOffice to save to WOPI server
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                
-                // Now download the saved file from WOPI server
-                console.log('Downloading file from WOPI server...');
-                const wopiServerUrl = window.WOPI_SERVER_URL || 'http://localhost:3002';
-                const response = await fetch(`${wopiServerUrl}/wopi/files/${fileId}/contents?nocache=${Date.now()}`);
-                
-                if (!response.ok) {
-                    throw new Error('Failed to get current file content');
-                }
-                
-                const fileBlob = await response.blob();
-                console.log('Downloaded file size:', fileBlob.size);
-                console.log('Downloaded file type:', fileBlob.type);
-                
-                // Convert blob to base64
-                const base64 = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.readAsDataURL(fileBlob);
-                });
-                
-                // Update file in Firebase Firestore
-                const fileDoc = doc(db, 'files', fileId);
-                await updateDoc(fileDoc, {
-                    fileContent: base64,
-                    fileSize: fileBlob.size,
-                    updatedAt: serverTimestamp()
-                });
-                
-                console.log('File updated in Firebase:', fileId);
-                console.log('New file size:', fileBlob.size);
-                console.log('Base64 length:', base64.length);
-                
-                // Show success message
-                showMessage('File saved to Firebase successfully! Please refresh your dashboard to see the changes.', 'success');
-                
-            } catch (error) {
-                console.error('Save error:', error);
-                showMessage('Failed to save file: ' + error.message, 'error');
-            } finally {
-                // Reset button state
-                saveButton.classList.remove('saving');
-                saveButton.disabled = false;
-            }
-        }
+
         
-        // Show message function
-        function showMessage(message, type = 'info') {
-            // Create a temporary message element
-            const messageDiv = document.createElement('div');
-            messageDiv.style.cssText = `
-                position: fixed;
-                top: 80px;
-                left: 20px;
-                z-index: 1001;
-                padding: 12px 20px;
-                border-radius: 5px;
-                color: white;
-                font-weight: bold;
-                background: ${type === 'success' ? '#28a745' : type === 'error' ? '#dc3545' : '#17a2b8'};
-                box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                transition: opacity 0.3s ease;
-            `;
-            messageDiv.textContent = message;
-            
-            document.body.appendChild(messageDiv);
-            
-            // Remove after 3 seconds
-            setTimeout(() => {
-                messageDiv.style.opacity = '0';
-                setTimeout(() => {
-                    document.body.removeChild(messageDiv);
-                }, 300);
-            }, 3000);
-        }
+
         
         // Chat functionality
         const chatMessages = document.getElementById('chat-messages');
