@@ -183,9 +183,16 @@ const Dashboard = () => {
 
   const openFileInLibreOffice = (file) => {
     // Open file in LibreOffice with the file ID and user info
-    const wopiServerUrl = process.env.REACT_APP_WOPI_SERVER_URL || 'http://localhost:3002';
+    // Use dynamic URL detection like the Collabora HTML file
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const wopiServerUrl = isDevelopment 
+      ? 'http://localhost:3002' 
+      : 'http://147.182.150.232:3002';
+    
     const userName = user.displayName || user.email?.split('@')[0] || 'User';
     const libreOfficeUrl = `${wopiServerUrl}/collabora-with-chat.html?fileId=${file.id}&userId=${user.uid}&userEmail=${encodeURIComponent(user.email || '')}&userName=${encodeURIComponent(userName)}`;
+    
+    console.log('Opening LibreOffice with URL:', libreOfficeUrl);
     window.open(libreOfficeUrl, '_blank');
   };
 
