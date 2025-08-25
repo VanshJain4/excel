@@ -35,6 +35,7 @@
         
         // Set environment variables based on current hostname
         const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        const isDigitalOceanApp = window.location.hostname.includes('ondigitalocean.app');
         
         if (isDevelopment) {
             // Development environment
@@ -42,8 +43,14 @@
             window.COLLABORA_URL = 'http://localhost:9980';
             window.REACT_APP_WOPI_SERVER_URL = 'http://localhost:3002';
             window.REACT_APP_COLLABORA_URL = 'http://localhost:9980';
+        } else if (isDigitalOceanApp) {
+            // Production environment (DigitalOcean App Platform)
+            window.WOPI_SERVER_URL = 'http://147.182.150.232:3002';
+            window.COLLABORA_URL = 'http://147.182.150.232:9980';
+            window.REACT_APP_WOPI_SERVER_URL = 'http://147.182.150.232:3002';
+            window.REACT_APP_COLLABORA_URL = 'http://147.182.150.232:9980';
         } else {
-            // Production environment
+            // Fallback to production (when accessed directly via IP)
             window.WOPI_SERVER_URL = 'http://147.182.150.232:3002';
             window.COLLABORA_URL = 'http://147.182.150.232:9980';
             window.REACT_APP_WOPI_SERVER_URL = 'http://147.182.150.232:3002';
@@ -54,6 +61,7 @@
             WOPI_SERVER_URL: window.WOPI_SERVER_URL,
             COLLABORA_URL: window.COLLABORA_URL,
             isDevelopment: isDevelopment,
+            isDigitalOceanApp: isDigitalOceanApp,
             hostname: window.location.hostname
         });
         
