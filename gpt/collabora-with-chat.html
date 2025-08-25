@@ -94,14 +94,6 @@
             }
         };
         
-        // Also define it globally for the onload attribute
-        function hideLoading() {
-            const loadingElement = document.getElementById('loading');
-            if (loadingElement) {
-                loadingElement.style.display = 'none';
-            }
-        }
-        
         // Get user info from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const userId = urlParams.get('userId');
@@ -474,11 +466,6 @@
     </button>
 
     <script>
-        // Hide loading when iframe loads
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-        
         // Get file ID from URL parameters
         function getFileIdFromUrl() {
             const urlParams = new URLSearchParams(window.location.search);
