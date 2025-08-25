@@ -76,6 +76,17 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "index.html"));
 });
 
+// Serve .env file for client-side environment variable loading
+app.get("/.env", (req, res) => {
+    const envPath = path.join(__dirname, "..", ".env");
+    if (fs.existsSync(envPath)) {
+        res.setHeader('Content-Type', 'text/plain');
+        res.sendFile(envPath);
+    } else {
+        res.status(404).json({ error: ".env file not found" });
+    }
+});
+
 // Collabora with chat interface
 app.get("/collabora-with-chat.html", (req, res) => {
     res.sendFile(path.join(__dirname, "collabora-with-chat.html"));
@@ -366,8 +377,8 @@ app.get("/debug/files", async (req, res) => {
     }
 });
 
-app.listen(PORT, () => {
-    console.log(`🚀 WOPI host running on http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 WOPI host running on http://0.0.0.0:${PORT}`);
     console.log(`📁 Firebase project: ${firebaseConfig.projectId}`);
     console.log(`🔍 Debug endpoint: http://localhost:${PORT}/debug/files`);
 }); 

@@ -12,6 +12,14 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
+# Load environment variables
+if [ -f .env ]; then
+    export $(cat .env | grep -v '^#' | xargs)
+    echo "✅ Environment variables loaded from .env"
+else
+    echo "⚠️  No .env file found, using defaults"
+fi
+
 # Start LibreOffice Collabora
 echo "📄 Starting LibreOffice Collabora..."
 docker-compose -f docker-compose.simple.yml up -d
@@ -47,10 +55,10 @@ sleep 5
 echo ""
 echo "🎉 Complete SKOPEO.AI System is running!"
 echo ""
-echo "📱 Frontend: http://localhost:3001"
+echo "📱 Frontend: http://localhost:${FRONTEND_PORT:-3001}"
 echo "🔧 Auth Backend: http://localhost:5001"
-echo "📁 WOPI Server: http://localhost:3002"
-echo "📄 LibreOffice: http://localhost:9980"
+echo "📁 WOPI Server: http://localhost:${WOPI_SERVER_PORT:-3002}"
+echo "📄 LibreOffice: http://localhost:${COLLABORA_PORT:-9980}"
 echo ""
 echo "💡 To stop all services, run: ./stop-complete-system.sh"
 echo ""

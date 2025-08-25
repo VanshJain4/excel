@@ -56,13 +56,15 @@ services:
     container_name: collabora
     restart: unless-stopped
     ports:
-      - "9980:9980"
+      - "${COLLABORA_PORT:-9980}:9980"
+    env_file:
+      - .env
     environment:
-      - domain=nextcloud\.localhost
+      - domain=${COLLABORA_HOST:-localhost}
       - username=admin
       - password=collabora_password
       - dictionaries=en_US
-      - extra_params=--o:ssl.enable=false --o:ssl.termination=false
+      - extra_params=--o:ssl.enable=false --o:ssl.termination=false --o:wopi.host.allowlist=* --o:net.frame_ancestors=* --o:net.post_allow.host=*
     cap_add:
       - MKNOD
     networks:

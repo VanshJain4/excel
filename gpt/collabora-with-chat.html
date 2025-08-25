@@ -33,39 +33,48 @@
         window.updateDoc = updateDoc;
         window.serverTimestamp = serverTimestamp;
         
-        // Load environment variables from .env file
-        async function loadEnvironmentVariables() {
-            try {
-                const response = await fetch('/.env');
-                if (response.ok) {
-                    const envText = await response.text();
-                    const envVars = {};
-                    
-                    envText.split('\n').forEach(line => {
-                        const [key, value] = line.split('=');
-                        if (key && value && !key.startsWith('#')) {
-                            envVars[key.trim()] = value.trim();
-                        }
-                    });
-                    
-                    // Make environment variables available globally
-                    window.WOPI_SERVER_URL = envVars.WOPI_SERVER_URL;
-                    window.COLLABORA_URL = envVars.COLLABORA_URL;
-                    window.REACT_APP_WOPI_SERVER_URL = envVars.REACT_APP_WOPI_SERVER_URL;
-                    window.REACT_APP_COLLABORA_URL = envVars.REACT_APP_COLLABORA_URL;
-                    
-                    console.log('Environment variables loaded:', {
-                        WOPI_SERVER_URL: window.WOPI_SERVER_URL,
-                        COLLABORA_URL: window.COLLABORA_URL
-                    });
-                }
-            } catch (error) {
-                console.log('Could not load .env file, using defaults');
-            }
+        // Set environment variables based on current hostname
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        if (isDevelopment) {
+            // Development environment
+            window.WOPI_SERVER_URL = 'http://host.docker.internal:3002';
+            window.COLLABORA_URL = 'http://localhost:9980';
+            window.REACT_APP_WOPI_SERVER_URL = 'http://localhost:3002';
+            window.REACT_APP_COLLABORA_URL = 'http://localhost:9980';
+        } else {
+            // Production environment
+            window.WOPI_SERVER_URL = 'http://147.182.150.232:3002';
+            window.COLLABORA_URL = 'http://147.182.150.232:9980';
+            window.REACT_APP_WOPI_SERVER_URL = 'http://147.182.150.232:3002';
+            window.REACT_APP_COLLABORA_URL = 'http://147.182.150.232:9980';
         }
         
-        // Load environment variables
-        loadEnvironmentVariables();
+        console.log('Environment variables set:', {
+            WOPI_SERVER_URL: window.WOPI_SERVER_URL,
+            COLLABORA_URL: window.COLLABORA_URL,
+            isDevelopment: isDevelopment,
+            hostname: window.location.hostname
+        });
+        
+        // Force cache refresh
+        console.log('Cache busting timestamp:', Date.now());
+        
+        // Define hideLoading function early to prevent errors
+        window.hideLoading = function() {
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+        };
+        
+        // Also define it globally for the onload attribute
+        function hideLoading() {
+            const loadingElement = document.getElementById('loading');
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+        }
         
         // Get user info from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -458,9 +467,17 @@
             const userName = getUserNameFromUrl();
             
             const iframe = document.getElementById('collabora-iframe');
-            // Get URLs from environment or use defaults
-            const collaboraUrl = window.COLLABORA_URL || 'http://147.182.150.232:9980';
-            const wopiServerUrl = window.WOPI_SERVER_URL || 'http://147.182.150.232:3002';
+            // Use environment variables
+            const collaboraUrl = window.COLLABORA_URL || 'http://localhost:9980';
+            const wopiServerUrl = window.WOPI_SERVER_URL || 'http://localhost:3002';
+            
+            console.log('Debug - Environment variables in updateIframeSrc:', {
+                window_WOPI_SERVER_URL: window.WOPI_SERVER_URL,
+                window_COLLABORA_URL: window.COLLABORA_URL,
+                wopiServerUrl: wopiServerUrl,
+                collaboraUrl: collaboraUrl
+            });
+            
             const wopiUrl = `${collaboraUrl}/browser/dist/cool.html?WOPISrc=${encodeURIComponent(wopiServerUrl)}%2Fwopi%2Ffiles%2F${fileId}%3FuserId%3D${encodeURIComponent(userId)}%26userEmail%3D${encodeURIComponent(userEmail)}%26userName%3D${encodeURIComponent(userName)}&permission=edit&nouserfollowing=true&nouserlist=true&nouserinfo=true&nouseravatar=true`;
             console.log('Loading Collabora with URL:', wopiUrl);
             iframe.src = wopiUrl;
@@ -526,7 +543,7 @@
                 
                 // Now download the saved file from WOPI server
                 console.log('Downloading file from WOPI server...');
-                const wopiServerUrl = window.WOPI_SERVER_URL || 'http://147.182.150.232:3002';
+                const wopiServerUrl = window.WOPI_SERVER_URL || 'http://localhost:3002';
                 const response = await fetch(`${wopiServerUrl}/wopi/files/${fileId}/contents?nocache=${Date.now()}`);
                 
                 if (!response.ok) {
