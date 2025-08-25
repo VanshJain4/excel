@@ -37,12 +37,12 @@ import {
   Upload as UploadIcon,
   Delete as DeleteIcon,
   Download as DownloadIcon,
-  Edit as EditIcon,
   Description,
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  DriveFileRenameOutline as RenameIcon
 } from '@mui/icons-material';
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
-import { uploadFile, getUserFiles, deleteFile, fetchUserFiles } from '../services/firebaseFileService';
+import { uploadFile, getUserFiles, deleteFile, fetchUserFiles, renameFile } from '../services/firebaseFileService';
 import CreateExcelButton from './CreateExcelButton';
 
 const Dashboard = () => {
@@ -60,6 +60,10 @@ const Dashboard = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [createFileDialogOpen, setCreateFileDialogOpen] = useState(false);
   const [creatingFile, setCreatingFile] = useState(false);
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [fileToRename, setFileToRename] = useState(null);
+  const [newFileName, setNewFileName] = useState('');
+  const [renaming, setRenaming] = useState(false);
 
   // Set up real-time listener for user files
   useEffect(() => {
@@ -153,15 +157,22 @@ const Dashboard = () => {
     setError('');
 
     try {
-      await uploadFile(selectedFile, user.uid, fileDescription);
+      const result = await uploadFile(selectedFile, user.uid, fileDescription);
 
       setUploadDialogOpen(false);
       setSelectedFile(null);
       setFileDescription('');
       setFileTags('');
-      setSuccess('File uploaded successfully!');
-      // Clear success message after 3 seconds
-      setTimeout(() => setSuccess(''), 3000);
+      
+      // Check if the file was renamed due to duplicates
+      if (result.originalName !== selectedFile.name) {
+        setSuccess(`File uploaded as "${result.originalName}" (original name was already taken)`);
+      } else {
+        setSuccess('File uploaded successfully!');
+      }
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(''), 5000);
     } catch (error) {
       console.error('Upload error:', error);
       setError(error.message || 'An unexpected error occurred during upload. Please try again.');
@@ -178,6 +189,38 @@ const Dashboard = () => {
       } catch (error) {
         setError(error.message || 'Failed to delete file');
       }
+    }
+  };
+
+  const handleRenameFile = (file) => {
+    setFileToRename(file);
+    setNewFileName(file.originalName || file.fileName);
+    setRenameDialogOpen(true);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!fileToRename || !newFileName.trim()) return;
+    
+    setRenaming(true);
+    try {
+      const result = await renameFile(fileToRename.id, newFileName.trim(), user.uid);
+      
+      // Check if the file was renamed with a different name due to duplicates
+      if (result.fileName !== newFileName.trim()) {
+        setSuccess(`File renamed to "${result.fileName}" (original name was already taken)`);
+      } else {
+        setSuccess('File renamed successfully!');
+      }
+      
+      setTimeout(() => setSuccess(''), 5000);
+      setRenameDialogOpen(false);
+      setFileToRename(null);
+      setNewFileName('');
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      setError('Failed to rename file: ' + error.message);
+    } finally {
+      setRenaming(false);
     }
   };
 
@@ -487,7 +530,20 @@ const Dashboard = () => {
                         <TableChart color="primary" />
                       </ListItemIcon>
                       <Box sx={{ flexGrow: 1, ml: 2 }}>
-                        <Typography variant="body1" component="div" fontWeight="medium">
+                        <Typography 
+                          variant="body1" 
+                          component="div" 
+                          fontWeight="medium"
+                          sx={{ 
+                            cursor: 'pointer',
+                            '&:hover': {
+                              textDecoration: 'underline',
+                              color: 'primary.main'
+                            }
+                          }}
+                          onClick={() => openFileInLibreOffice(file)}
+                          title="Click to open in LibreOffice"
+                        >
                           {file.originalName}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" component="div">
@@ -514,10 +570,10 @@ const Dashboard = () => {
                       <Box sx={{ display: 'flex', gap: 1, ml: 2 }}>
                         <IconButton
                           size="small"
-                          onClick={() => openFileInLibreOffice(file)}
-                          title="Open in LibreOffice"
+                          onClick={() => handleRenameFile(file)}
+                          title="Rename file"
                         >
-                          <EditIcon />
+                          <RenameIcon />
                         </IconButton>
                         <IconButton
                           size="small"
@@ -617,6 +673,40 @@ const Dashboard = () => {
               startIcon={uploading ? <CircularProgress size={20} /> : <UploadIcon />}
             >
               {uploading ? 'Uploading...' : 'Upload'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Rename Dialog */}
+        <Dialog open={renameDialogOpen} onClose={() => setRenameDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle>Rename File</DialogTitle>
+          <DialogContent>
+            <Box sx={{ pt: 1 }}>
+              <TextField
+                fullWidth
+                label="New File Name"
+                value={newFileName}
+                onChange={(e) => setNewFileName(e.target.value)}
+                sx={{ mb: 2 }}
+                placeholder="Enter new file name"
+                autoFocus
+              />
+              {fileToRename && (
+                <Typography variant="body2" color="text.secondary">
+                  Current name: {fileToRename.originalName}
+                </Typography>
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleRenameSubmit}
+              variant="contained"
+              disabled={!newFileName.trim() || renaming}
+              startIcon={renaming ? <CircularProgress size={20} /> : <RenameIcon />}
+            >
+              {renaming ? 'Renaming...' : 'Rename'}
             </Button>
           </DialogActions>
         </Dialog>

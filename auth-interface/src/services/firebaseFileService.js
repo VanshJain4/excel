@@ -26,17 +26,49 @@ const fileToBase64 = (file) => {
   });
 };
 
+// Helper function to generate unique file name
+const generateUniqueFileName = (fileName, existingFiles) => {
+  // Split filename and extension
+  const lastDotIndex = fileName.lastIndexOf('.');
+  const nameWithoutExt = lastDotIndex !== -1 ? fileName.substring(0, lastDotIndex) : fileName;
+  const extension = lastDotIndex !== -1 ? fileName.substring(lastDotIndex) : '';
+  
+  // Check if filename already exists
+  const existingNames = existingFiles.map(file => file.originalName || file.fileName);
+  
+  if (!existingNames.includes(fileName)) {
+    return fileName;
+  }
+  
+  // Find the next available number
+  let counter = 1;
+  let newFileName;
+  
+  do {
+    newFileName = `${nameWithoutExt} (${counter})${extension}`;
+    counter++;
+  } while (existingNames.includes(newFileName));
+  
+  return newFileName;
+};
+
 // Upload file to Firestore as base64 (free solution)
 export const uploadFile = async (file, userId, description = '') => {
   try {
+    // Get existing files to check for duplicates
+    const existingFiles = await fetchUserFiles(userId);
+    
+    // Generate unique file name
+    const uniqueFileName = generateUniqueFileName(file.name, existingFiles);
+    
     // Convert file to base64
     const fileBase64 = await fileToBase64(file);
     
     // Save file data to Firestore
     const fileData = {
       userId: userId,
-      fileName: file.name,
-      originalName: file.name,
+      fileName: uniqueFileName,
+      originalName: uniqueFileName,
       fileSize: file.size,
       mimeType: file.type,
       fileType: file.name.split('.').pop().toLowerCase(),
@@ -53,6 +85,7 @@ export const uploadFile = async (file, userId, description = '') => {
     
     return {
       id: docRef.id,
+      originalName: uniqueFileName,
       ...fileData
     };
   } catch (error) {
@@ -150,6 +183,32 @@ export const getFileDownloadURL = async (fileId) => {
     throw new Error('File not found');
   } catch (error) {
     console.error('Error getting file content:', error);
+    throw error;
+  }
+};
+
+// Rename file in Firestore
+export const renameFile = async (fileId, newName, userId) => {
+  try {
+    // Get existing files to check for duplicates (excluding the current file)
+    const existingFiles = await fetchUserFiles(userId);
+    const otherFiles = existingFiles.filter(file => file.id !== fileId);
+    
+    // Generate unique file name
+    const uniqueFileName = generateUniqueFileName(newName, otherFiles);
+    
+    const fileDoc = doc(db, 'files', fileId);
+    
+    // Update only the fileName and originalName fields
+    await updateDoc(fileDoc, {
+      fileName: uniqueFileName,
+      originalName: uniqueFileName,
+      updatedAt: serverTimestamp()
+    });
+
+    return { success: true, fileName: uniqueFileName };
+  } catch (error) {
+    console.error('Error renaming file:', error);
     throw error;
   }
 };
