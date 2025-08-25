@@ -476,9 +476,23 @@
             const userName = getUserNameFromUrl();
             
             const iframe = document.getElementById('collabora-iframe');
-            // Use environment variables
-            const collaboraUrl = window.COLLABORA_URL || 'http://localhost:9980';
-            const wopiServerUrl = window.WOPI_SERVER_URL || 'http://localhost:3002';
+            // Use environment variables with better fallback logic
+            let collaboraUrl = window.COLLABORA_URL;
+            let wopiServerUrl = window.WOPI_SERVER_URL;
+            
+            // If environment variables are not set, detect environment manually
+            if (!collaboraUrl || !wopiServerUrl) {
+                const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const isDigitalOceanApp = window.location.hostname.includes('ondigitalocean.app');
+                
+                if (isDevelopment) {
+                    collaboraUrl = 'http://localhost:9980';
+                    wopiServerUrl = 'http://localhost:3002';
+                } else {
+                    collaboraUrl = 'http://147.182.150.232:9980';
+                    wopiServerUrl = 'http://147.182.150.232:3002';
+                }
+            }
             
             console.log('Debug - Environment variables in updateIframeSrc:', {
                 window_WOPI_SERVER_URL: window.WOPI_SERVER_URL,
@@ -508,8 +522,15 @@
             return urlParams.get('userName') || 'User';
         }
         
-        // Initialize with the correct file
-        updateIframeSrc();
+        // Initialize with the correct file - ensure environment variables are set first
+        // Wait a bit to ensure the module script has set the environment variables
+        setTimeout(() => {
+            console.log('Calling updateIframeSrc with environment variables:', {
+                WOPI_SERVER_URL: window.WOPI_SERVER_URL,
+                COLLABORA_URL: window.COLLABORA_URL
+            });
+            updateIframeSrc();
+        }, 100);
         
         // Custom Save Function - Firebase base64 approach
         async function saveFile() {
