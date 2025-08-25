@@ -109,9 +109,12 @@ export const getUserFiles = (userId, callback, errorCallback) => {
         ...doc.data()
       });
     });
-    // Sort by createdAt in JavaScript instead of Firestore
+    // Sort by updatedAt (most recently updated first) in JavaScript instead of Firestore
     files.sort((a, b) => {
-      if (a.createdAt && b.createdAt) {
+      if (a.updatedAt && b.updatedAt) {
+        return b.updatedAt.toDate() - a.updatedAt.toDate();
+      } else if (a.createdAt && b.createdAt) {
+        // Fallback to createdAt if updatedAt is not available
         return b.createdAt.toDate() - a.createdAt.toDate();
       }
       return 0;
@@ -231,9 +234,12 @@ export const fetchUserFiles = async (userId) => {
       });
     });
     
-    // Sort by createdAt
+    // Sort by updatedAt (most recently updated first)
     files.sort((a, b) => {
-      if (a.createdAt && b.createdAt) {
+      if (a.updatedAt && b.updatedAt) {
+        return b.updatedAt.toDate() - a.updatedAt.toDate();
+      } else if (a.createdAt && b.createdAt) {
+        // Fallback to createdAt if updatedAt is not available
         return b.createdAt.toDate() - a.createdAt.toDate();
       }
       return 0;
